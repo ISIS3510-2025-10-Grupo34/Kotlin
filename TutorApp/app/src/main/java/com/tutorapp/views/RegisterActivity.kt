@@ -38,7 +38,10 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.rememberAsyncImagePainter
 import java.io.ByteArrayOutputStream
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.style.TextAlign
+import androidx.core.content.FileProvider
 import com.tutorapp.viewModels.LoginViewModel
+import java.io.File
 
 class RegisterActivity : ComponentActivity() {
     private val registerViewModel: RegisterViewModel by viewModels()
@@ -406,9 +409,29 @@ fun UploadIDScreen(
 ) {
     var idPictureUri by remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
+    val contentResolver = context.contentResolver
 
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+    // Crear un Uri temporal para la foto de la cámara
+    val cameraImageUri = remember { mutableStateOf<Uri?>(null) }
+
+    // Selector de imagen desde la galería
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         idPictureUri = uri
+    }
+
+    // Tomar foto con la cámara
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) {
+            idPictureUri = cameraImageUri.value
+        }
+    }
+
+    fun captureImage() {
+        val photoFile = File(context.cacheDir, "photo_${System.currentTimeMillis()}.jpg")
+        cameraImageUri.value = FileProvider.getUriForFile(context, "${context.packageName}.provider", photoFile)
+        cameraImageUri.value?.let { uri ->
+            cameraLauncher.launch(uri)
+        }
     }
 
     Column(
@@ -419,7 +442,8 @@ fun UploadIDScreen(
         Spacer(modifier = Modifier.height(20.dp))
         Text(
             "You have to upload a picture of your university ID so we can verify your identity and university.",
-            style = MaterialTheme.typography.bodyMedium
+            style = Typography.bodyLarge,
+            textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -428,12 +452,29 @@ fun UploadIDScreen(
                 .size(200.dp)
                 .background(Color.Gray.copy(alpha = 0.2f))
                 .clip(RoundedCornerShape(8.dp))
-                .clickable { launcher.launch("image/*") },
+                .clickable { galleryLauncher.launch("image/*") },
             contentAlignment = Alignment.Center
         ) {
             idPictureUri?.let {
                 Image(painter = rememberAsyncImagePainter(it), contentDescription = "ID Picture")
-            } ?: Text("Tap to upload picture", color = Color.DarkGray)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Button(onClick = { galleryLauncher.launch("image/*") },colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))) {
+                Text("Choose from Gallery")
+
+            }
+
+            Button(onClick = { captureImage() },colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))) {
+                Text("Take a Photo")
+            }
+
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -456,12 +497,11 @@ fun UploadIDScreen(
                         learningStyles = learningStyles,
                         idPictureUri = idPictureUri,
                         context = context
-                    ){ success, message ->
+                    ) { success, message ->
                         if (success) {
-                            val intent =  Intent(context, LoginActivity::class.java)
+                            val intent = Intent(context, LoginActivity::class.java)
                             context.startActivity(intent)
                             Toast.makeText(context, "Register Successful", Toast.LENGTH_SHORT).show()
-
                         } else {
                             Toast.makeText(context, "Register Failed: $message", Toast.LENGTH_SHORT).show()
                             onRegisterFail("")
