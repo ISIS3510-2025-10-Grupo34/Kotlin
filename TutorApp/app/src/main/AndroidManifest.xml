@@ -28,6 +28,8 @@
 
         <!-- Declaración de la RegisterActivity (si existe) -->
         <activity android:name=".views.RegisterActivity" />
+        <activity android:name=".views.HomeActivity" />
+        <activity android:name=".views.StudentProfileActivity" />
     </application>
 
 </manifest>

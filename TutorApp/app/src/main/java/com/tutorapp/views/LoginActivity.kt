@@ -1,6 +1,8 @@
 package com.tutorapp.views
+import android.content.Intent
 import com.tutorapp.viewModels.LoginViewModel
 import android.os.Bundle
+import android.os.Message
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -18,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import com.tutorapp.ui.theme.Typography
+import org.json.JSONObject
 
 class LoginActivity : ComponentActivity() {
     private val loginViewModel: LoginViewModel by viewModels()
@@ -95,6 +98,12 @@ fun LoginScreen(viewModel: LoginViewModel) {
                 viewModel.login(email, password) { success, message ->
                     if (success) {
                         Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
+
+                        val intent = Intent(context, HomeActivity::class.java).apply {
+                            putExtra("TOKEN_KEY", message)
+                        }
+                        context.startActivity(intent)
+
                     } else {
                         Toast.makeText(context, "Login Failed: $message", Toast.LENGTH_SHORT).show()
                     }
