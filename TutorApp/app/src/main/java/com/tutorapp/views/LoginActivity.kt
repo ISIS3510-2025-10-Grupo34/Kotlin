@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.tutorapp.ui.theme.Typography
 import org.json.JSONObject
 
+
 class LoginActivity : ComponentActivity() {
     private val loginViewModel: LoginViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -99,10 +100,12 @@ fun LoginScreen(viewModel: LoginViewModel) {
                     if (success) {
                         Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
 
+
                         val intent = Intent(context, HomeActivity::class.java).apply {
                             putExtra("TOKEN_KEY", message)
                         }
                         context.startActivity(intent)
+
 
                     } else {
                         Toast.makeText(context, "Login Failed: $message", Toast.LENGTH_SHORT).show()

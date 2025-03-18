@@ -8,14 +8,17 @@ import kotlinx.coroutines.launch
 import android.util.Base64
 import org.json.JSONObject
 
+
 class LoginViewModel : ViewModel() {
     fun login(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
             try {
                 val response = RetrofitClient.instance.login(LoginRequest(email, password))
                 if (response.isSuccessful) {
+
                     val token = decodeJwt(response.body()?.data?.token)
                     onResult(true, token)
+
                 } else {
                     onResult(false, response.errorBody()?.string() ?: "Login failed")
                 }
@@ -24,6 +27,7 @@ class LoginViewModel : ViewModel() {
             }
         }
     }
+
     private fun decodeJwt(token: String?): String? {
         return try {
             val parts = token?.split(".")
@@ -39,4 +43,5 @@ class LoginViewModel : ViewModel() {
             null
         }
     }
+
 }

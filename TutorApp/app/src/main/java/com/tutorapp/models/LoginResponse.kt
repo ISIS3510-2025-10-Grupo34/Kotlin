@@ -1,9 +1,13 @@
 package com.tutorapp.models
 
 data class LoginResponse(
+
     val data: TokenData
 )
 
 data class TokenData(
-    val token: String
+
+    val token: String,
+    val userId: String
+
 )

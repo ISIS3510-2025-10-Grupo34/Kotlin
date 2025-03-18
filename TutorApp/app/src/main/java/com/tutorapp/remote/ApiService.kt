@@ -1,6 +1,7 @@
 package com.tutorapp.remote
 
 
+
 import com.tutorapp.models.StudentProfileRequest
 import com.tutorapp.models.StudentProfileResponse
 import com.tutorapp.models.*
@@ -24,4 +25,5 @@ interface ApiService {
 
     @POST("studentprofile/")
     suspend fun studentProfile(@Body request: StudentProfileRequest): Response<StudentProfileResponse>
+
 }

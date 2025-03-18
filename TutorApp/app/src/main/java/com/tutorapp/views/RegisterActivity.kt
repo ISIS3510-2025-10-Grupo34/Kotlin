@@ -43,6 +43,7 @@ import androidx.core.content.FileProvider
 import com.tutorapp.viewModels.LoginViewModel
 import java.io.File
 
+
 class RegisterActivity : ComponentActivity() {
     private val registerViewModel: RegisterViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -409,6 +410,7 @@ fun UploadIDScreen(
 ) {
     var idPictureUri by remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
+
     val contentResolver = context.contentResolver
 
     // Crear un Uri temporal para la foto de la cámara
@@ -434,6 +436,13 @@ fun UploadIDScreen(
         }
     }
 
+
+
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        idPictureUri = uri
+    }
+
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -442,8 +451,10 @@ fun UploadIDScreen(
         Spacer(modifier = Modifier.height(20.dp))
         Text(
             "You have to upload a picture of your university ID so we can verify your identity and university.",
+
             style = Typography.bodyLarge,
             textAlign = TextAlign.Center
+
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -452,11 +463,14 @@ fun UploadIDScreen(
                 .size(200.dp)
                 .background(Color.Gray.copy(alpha = 0.2f))
                 .clip(RoundedCornerShape(8.dp))
+
                 .clickable { galleryLauncher.launch("image/*") },
+
             contentAlignment = Alignment.Center
         ) {
             idPictureUri?.let {
                 Image(painter = rememberAsyncImagePainter(it), contentDescription = "ID Picture")
+
             }
         }
 
@@ -474,6 +488,9 @@ fun UploadIDScreen(
             Button(onClick = { captureImage() },colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))) {
                 Text("Take a Photo")
             }
+
+
+            } ?: Text("Tap to upload picture", color = Color.DarkGray)
 
         }
 
@@ -497,11 +514,13 @@ fun UploadIDScreen(
                         learningStyles = learningStyles,
                         idPictureUri = idPictureUri,
                         context = context
+
                     ) { success, message ->
                         if (success) {
                             val intent = Intent(context, LoginActivity::class.java)
                             context.startActivity(intent)
                             Toast.makeText(context, "Register Successful", Toast.LENGTH_SHORT).show()
+
                         } else {
                             Toast.makeText(context, "Register Failed: $message", Toast.LENGTH_SHORT).show()
                             onRegisterFail("")
@@ -516,4 +535,6 @@ fun UploadIDScreen(
             Text("Create my account", color = Color.White)
         }
     }
+
 }
+
