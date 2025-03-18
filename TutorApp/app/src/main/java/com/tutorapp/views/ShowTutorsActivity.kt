@@ -134,24 +134,6 @@ fun ListOfTutorCards(modifier:Modifier){
 
 
 @Composable
-/*fun TutorCard(modifier: Modifier){
-    ElevatedCard(
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 6.dp
-        ),
-        modifier = Modifier
-            .size(width = 400.dp, height = 250.dp)
-            .padding(horizontal = 30.dp)
-    ) {
-        Text(
-            text = "Tutor name",
-            modifier = Modifier
-                .padding(16.dp),
-            textAlign = TextAlign.Center
-        )
-    }
-}*/
-
 fun TutorCard(modifier: Modifier) {
     Column(
         modifier = Modifier
