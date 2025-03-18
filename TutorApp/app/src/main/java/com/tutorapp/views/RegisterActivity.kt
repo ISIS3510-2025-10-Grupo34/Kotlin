@@ -536,5 +536,4 @@ fun UploadIDScreen(
         }
     }
 
-}
 
