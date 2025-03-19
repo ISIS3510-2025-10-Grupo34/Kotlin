@@ -1,6 +1,5 @@
-package com.tutorapp.views
+package com.tutorapp.showTutors
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,31 +22,30 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import com.tutorapp.showTutors.data.network.response.TutorResponse
 
 
 @Composable
-fun ShowTutorsActivity(modifier: Modifier){
+fun ShowTutorsActivity(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel){
 
     Column (modifier = modifier.fillMaxSize(1f)){
         Header(modifier = Modifier.height(IntrinsicSize.Min))
         FilterResultsButton(modifier = Modifier)
-        ListOfTutorCards(modifier = modifier)
+        ListOfTutorCards(modifier = modifier, showTutorsViewModel)
     }
 
 }
@@ -59,7 +57,7 @@ fun Header(modifier: Modifier){
             .weight(1f)
             .padding(horizontal = 15.dp, vertical = 15.dp),
             fontSize = 35.sp,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            fontWeight = FontWeight.Bold,
         )
         Row (modifier = Modifier
             .weight(0.5f)
@@ -117,9 +115,21 @@ fun FilterResultsButton(modifier: Modifier){
 
 }
 
-@Composable()
-fun ListOfTutorCards(modifier:Modifier){
-
+@Composable
+fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel ){
+    val exampleTutor = TutorResponse(
+        id = 0,
+        name = "Example Tutor Name",
+        email = "example@example.com",
+        subject = "Example suibject",
+        title = "Example title",
+        description = "Example description.",
+        reviews_score = 0.0f,
+        image_url = "http://imgfz.com/i/pk1F9ca.jpeg"
+    )
+    val exampleList : List<TutorResponse> = listOf(exampleTutor)
+    showTutorsViewModel.onStart()
+    val tutors: List<TutorResponse> by showTutorsViewModel.tutors.observeAsState(initial = exampleList)
     val scrollState = rememberScrollState()
 
     Column(modifier = modifier
@@ -127,14 +137,15 @@ fun ListOfTutorCards(modifier:Modifier){
             .verticalScroll(scrollState)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)){
-        TutorCard(modifier = Modifier)
-        TutorCard(modifier = Modifier)
+        tutors.forEach {
+            tutor -> TutorCard(modifier = Modifier, tutor = tutor)
+        }
     }
 }
 
 
 @Composable
-fun TutorCard(modifier: Modifier) {
+fun TutorCard(modifier: Modifier, tutor: TutorResponse) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -153,14 +164,14 @@ fun TutorCard(modifier: Modifier) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "A",
+                    text = tutor.name[0].uppercase(),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Alejandro Hernandez",
+                text = tutor.name,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -173,13 +184,13 @@ fun TutorCard(modifier: Modifier) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(120.dp)
-                .background(Color(0xFFEEEEEE)), // Lighter Gray
+                , // Lighter Gray
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Image Placeholder",
-                fontSize = 16.sp,
-                color = Color.Gray
+
+            AsyncImage(
+                model = tutor.image_url,
+                contentDescription = null
             )
         }
 
@@ -188,18 +199,18 @@ fun TutorCard(modifier: Modifier) {
         // Information Section (Column)
         Column {
             Text(
-                text = "Programming tutoring",
+                text = tutor.subject,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "Computer Science student",
+                text = tutor.title,
                 fontSize = 14.sp,
                 color = Color.Gray
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "I have been tutoring since 2018.",
+                text = tutor.description,
                 fontSize = 14.sp
             )
         }
