@@ -31,4 +31,38 @@ class ShowTutorsViewModel: ViewModel() {
         }
 
     }
+
+    suspend fun onFilterClick(university:String, course:String, professor:String){
+        val tutorList = showTutorsUseCase()
+        if(university.isNotEmpty() && course.isNotEmpty() && professor.isNotEmpty()){
+            val filteredList = tutorList.filter { tutor ->
+                tutor.university.contains(university, ignoreCase = true) &&
+                        tutor.course.contains(course, ignoreCase = true) &&
+                        tutor.name.contains(professor, ignoreCase = true)
+            }
+            _tutors.value = filteredList
+        }
+        /**else if(university.isNotEmpty() && course.isNotEmpty()) {
+            val filteredList = tutorList.filter { tutor ->
+                tutor.university.contains(university, ignoreCase = true) &&
+                        tutor.course.contains(course, ignoreCase = true)
+            }
+            _tutors.value = filteredList
+            // Handle the case where one or more parameters are empty
+            // You might want to show an error message or load all tutors
+            // For example:
+            //onStart() // Load all tutors if any parameter is empty
+        }
+        else if(university.isNotEmpty() && professor.isNotEmpty()){
+            val filteredList = tutorList.filter { tutor ->
+                tutor.university.contains(university, ignoreCase = true) &&
+                        tutor.name.contains(professor, ignoreCase = true)
+            }
+            _tutors.value = filteredList
+        }*/
+        else{
+            onStart()
+        }
+
+    }
 }

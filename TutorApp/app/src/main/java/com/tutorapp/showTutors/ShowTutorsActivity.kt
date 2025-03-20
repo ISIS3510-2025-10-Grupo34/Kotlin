@@ -1,6 +1,9 @@
 package com.tutorapp.showTutors
 
+import android.util.Log
+import androidx.appcompat.widget.PopupMenu.OnDismissListener
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,15 +22,26 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,19 +51,36 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.tutorapp.showTutors.data.network.response.TutorResponse
+import com.tutorapp.ui.theme.Primary
+import com.tutorapp.ui.theme.White
+import kotlinx.coroutines.launch
+import okhttp3.Request
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShowTutorsActivity(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel){
+fun ShowTutorsActivity(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel) {
+    showTutorsViewModel.onStart()
+    //Column(modifier = modifier) {
+    //    Box(modifier.weight(1f)) {
+    //        FilterForm(modifier = modifier, showTutorsViewModel)
+    //    }
 
-    Column (modifier = modifier.fillMaxSize(1f)){
-        Header(modifier = Modifier.height(IntrinsicSize.Min))
-        FilterResultsButton(modifier = Modifier)
-        ListOfTutorCards(modifier = modifier, showTutorsViewModel)
-    }
+        var sheetState = rememberModalBottomSheetState()
+        //var showBottomSheet by remember { mutableStateOf(false)}
 
+        //FilterBottomSheet(modifier=modifier, showTutorsViewModel )
+        Column(modifier = modifier.fillMaxSize(1f)) {
+            Header(modifier = Modifier.height(IntrinsicSize.Min))
+            FilterResultsButton(modifier = Modifier, showTutorsViewModel)
+            //FilterForm(modifier = modifier.weight(1f))
+            ListOfTutorCards(modifier = modifier.weight(1f), showTutorsViewModel)
+        }
+
+
+
+    //}
 }
-
 @Composable
 fun Header(modifier: Modifier){
     Row (modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween){
@@ -100,9 +131,11 @@ fun Header(modifier: Modifier){
 
 
 @Composable
-fun FilterResultsButton(modifier: Modifier){
+fun FilterResultsButton(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel){
+
+    var showBottomSheet by remember { mutableStateOf(false) }
     Row (modifier){
-        Button(onClick = {}, modifier.weight(1f)
+        Button(onClick = { showBottomSheet = true }, modifier.weight(1f)
             .padding(horizontal = 35.dp)
             , colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
         )
@@ -113,6 +146,14 @@ fun FilterResultsButton(modifier: Modifier){
         Column(modifier.weight(1f)) {  }
     }
 
+    if (showBottomSheet){
+        FilterBottomSheet(modifier=modifier, showTutorsViewModel,
+            onDismissRequest = { showBottomSheet = false }
+        )
+
+
+    }
+
 }
 
 @Composable
@@ -121,15 +162,17 @@ fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMode
         id = 0,
         name = "Example Tutor Name",
         email = "example@example.com",
-        subject = "Example suibject",
+        course = "Example suibject",
+        university = "Example University",
         title = "Example title",
         description = "Example description.",
         reviews_score = 0.0f,
-        image_url = "http://imgfz.com/i/pk1F9ca.jpeg"
+        image_url = "https://imgfz.com/i/pk1F9ca.jpeg"
     )
     val exampleList : List<TutorResponse> = listOf(exampleTutor)
-    showTutorsViewModel.onStart()
+
     val tutors: List<TutorResponse> by showTutorsViewModel.tutors.observeAsState(initial = exampleList)
+    Log.d("MyComposable", "List size: ${tutors.size}")
     val scrollState = rememberScrollState()
 
     Column(modifier = modifier
@@ -151,7 +194,7 @@ fun TutorCard(modifier: Modifier, tutor: TutorResponse) {
             .fillMaxWidth()
             .padding(16.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
+            .background(White)
             .padding(16.dp)
     ) {
         // Top Section (Row)
@@ -199,7 +242,7 @@ fun TutorCard(modifier: Modifier, tutor: TutorResponse) {
         // Information Section (Column)
         Column {
             Text(
-                text = tutor.subject,
+                text = tutor.course,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -221,9 +264,225 @@ fun TutorCard(modifier: Modifier, tutor: TutorResponse) {
         Button(
             onClick = { /* Handle booking */ },
             modifier = Modifier.align(Alignment.End),
-            colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
+            colors = ButtonColors(containerColor = Primary, contentColor = White, disabledContentColor = White, disabledContainerColor = Primary )
         ) {
             Text(text = "Book")
         }
     }
 }
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel,
+                      onDismissRequest: () -> Unit){
+
+    val coroutineScope = rememberCoroutineScope()
+    var universityName by remember { mutableStateOf("") }
+    var courseName by remember { mutableStateOf("") }
+    var professorName by remember { mutableStateOf("") }
+    var showSuggestions by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedTextField(
+                value = universityName,
+                onValueChange = { universityName = it },
+                label = { Text("University") },
+                trailingIcon = {
+                    if (universityName.isNotEmpty()) {
+                        IconButton(onClick = { universityName = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = courseName,
+                onValueChange = { courseName = it },
+                label = { Text("Course") },
+                trailingIcon = {
+                    if (courseName.isNotEmpty()) {
+                        IconButton(onClick = { courseName = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = professorName,
+                onValueChange = {
+                    professorName = it
+                    showSuggestions = it.isNotEmpty()
+                },
+                label = { Text("Professor") },
+                trailingIcon = {
+                    if (professorName.isNotEmpty()) {
+                        IconButton(onClick = {
+                            professorName = ""
+                            showSuggestions = false
+                        }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            /*if (showSuggestions) {
+                SuggestionDropdown(
+                    suggestions = listOf("Juan Hernandez", "Julián Rodriguez"),
+                    onSuggestionClick = { selectedSuggestion ->
+                        professorName = selectedSuggestion
+                        showSuggestions = false
+                    }
+                )
+            }*/
+
+            Button(
+                onClick =
+                { coroutineScope.launch {
+                    try{
+                        showTutorsViewModel.onFilterClick(universityName, courseName, professorName)
+                    }catch (e:Exception){
+                        println(e)
+                    }
+                }
+                },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text("Filter")
+            }
+        }
+    }
+}
+
+
+/**
+@Composable
+fun FilterForm(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel) {
+
+    val coroutineScope = rememberCoroutineScope()
+    var universityName by remember { mutableStateOf("") }
+    var courseName by remember { mutableStateOf("") }
+    var professorName by remember { mutableStateOf("") }
+    var showSuggestions by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        OutlinedTextField(
+            value = universityName,
+            onValueChange = { universityName = it },
+            label = { Text("University") },
+            trailingIcon = {
+                if (universityName.isNotEmpty()) {
+                    IconButton(onClick = { universityName = "" }) {
+                        Icon(Icons.Default.Clear, contentDescription = "Clear")
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = courseName,
+            onValueChange = { courseName = it },
+            label = { Text("Course") },
+            trailingIcon = {
+                if (courseName.isNotEmpty()) {
+                    IconButton(onClick = { courseName = "" }) {
+                        Icon(Icons.Default.Clear, contentDescription = "Clear")
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = professorName,
+            onValueChange = {
+                professorName = it
+                showSuggestions = it.isNotEmpty()
+            },
+            label = { Text("Professor") },
+            trailingIcon = {
+                if (professorName.isNotEmpty()) {
+                    IconButton(onClick = {
+                        professorName = ""
+                        showSuggestions = false
+                    }) {
+                        Icon(Icons.Default.Clear, contentDescription = "Clear")
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        /*if (showSuggestions) {
+            SuggestionDropdown(
+                suggestions = listOf("Juan Hernandez", "Julián Rodriguez"),
+                onSuggestionClick = { selectedSuggestion ->
+                    professorName = selectedSuggestion
+                    showSuggestions = false
+                }
+            )
+        }*/
+
+        Button(
+            onClick =
+                { coroutineScope.launch {
+                   try{
+                        showTutorsViewModel.onFilterClick(universityName, courseName, professorName)
+                    }catch (e:Exception){
+                        println(e)
+                    }
+                }
+            },
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text("Filter")
+        }
+    }
+}
+
+
+/*
+@Composable
+fun SuggestionDropdown(suggestions: List<String>, onSuggestionClick: (String) -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp)
+            .clip(RoundedCornerShape(8.dp)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(8.dp)) {
+            suggestions.forEach { suggestion ->
+                Text(
+                    text = suggestion,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSuggestionClick(suggestion) }
+                        .padding(vertical = 4.dp)
+                )
+            }
+        }
+    }
+}*/ */
+
+
