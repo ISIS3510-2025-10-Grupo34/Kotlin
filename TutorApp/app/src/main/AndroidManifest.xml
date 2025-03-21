@@ -33,6 +33,7 @@
         <activity android:name=".views.HomeActivity" />
         <activity android:name=".views.StudentProfileActivity" />
         <activity android:name=".views.AddCourseActivity" />
+        <activity android:name=".views.WriteReviewActivity" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
