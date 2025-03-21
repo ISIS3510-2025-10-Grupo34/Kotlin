@@ -43,7 +43,7 @@ class WriteReviewActivity : ComponentActivity() {
 }
 
 @Composable
-fun Header(modifier: Modifier){
+private fun Header(modifier: Modifier){
     Row (modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween){
         Text("TutorApp", modifier = Modifier
             .weight(1f)
@@ -163,33 +163,6 @@ fun WriteReviewScreen(viewModel: LoginViewModel) {
 
         Button(onClick = { /* Submit logic */ }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))) {
             Text("Submit", color = Color.White)
-        }
-    }
-}
-
-@Composable
-fun TutorReviewItem() {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF1A2546)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = "A", color = Color.White, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Column {
-            Row {
-                repeat(4) {
-                    Icon(imageVector = Icons.Default.Favorite, contentDescription = "Star", tint = Color(0xFF1A2546))
-                }
-                Icon(imageVector = Icons.Default.FavoriteBorder, contentDescription = "Star", tint = Color(0xFF1A2546))
-            }
-            Text(text = "Supporting line text lorem ipsum dolor sit amet, consectetur.")
         }
     }
 }

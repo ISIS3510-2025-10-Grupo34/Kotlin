@@ -43,7 +43,7 @@ class TutorProfileActivity : ComponentActivity() {
 }
 
 @Composable
-fun Header(modifier: Modifier){
+private fun Header(modifier: Modifier){
     Row (modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween){
         Text("TutorApp", modifier = Modifier
             .weight(1f)
@@ -167,7 +167,7 @@ fun TutorProfileScreen(viewModel: LoginViewModel) {
 }
 
 @Composable
-fun TutorReviewItem() {
+private fun TutorReviewItem() {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Box(
             modifier = Modifier
