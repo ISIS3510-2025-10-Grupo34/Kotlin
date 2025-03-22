@@ -2,6 +2,7 @@
 
 package com.tutorapp.views
 
+import android.content.Intent
 import com.tutorapp.viewModels.LoginViewModel
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -20,181 +21,246 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.json.JSONObject
 
 class TutorProfileActivity : ComponentActivity() {
     private val loginViewModel: LoginViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val isTutor = intent.getBooleanExtra("isTutor", true) // Default is false (student)
+        //val token = intent.getStringExtra("TOKEN_KEY") ?: ""
         setContent {
-            TutorProfileScreen(loginViewModel)
+            TutorProfileScreen(loginViewModel, isTutor, "")
         }
     }
-}
 
-@Composable
-private fun Header(modifier: Modifier){
-    Row (modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween){
-        Text("TutorApp", modifier = Modifier
-            .weight(1f)
-            .padding(vertical = 15.dp),
-            fontSize = 35.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Row (modifier = Modifier
-            .weight(0.5f)
-            .fillMaxWidth()
-            .padding(horizontal = 25.dp, vertical = 35.dp)
 
-            , horizontalArrangement = Arrangement.Absolute.SpaceBetween
-        ){
-            IconButton(onClick = {},
+    @Composable
+    private fun Header(modifier: Modifier) {
+        Row(modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(
+                "TutorApp",
                 modifier = Modifier
-                    .size(25.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF192650))
-
+                    .weight(1f)
+                    .padding(vertical = 15.dp),
+                fontSize = 35.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Row(
+                modifier = Modifier
+                    .weight(0.5f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 25.dp, vertical = 35.dp),
+                horizontalArrangement = Arrangement.Absolute.SpaceBetween
             ) {
-                Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = "Notifications",
-                    tint = Color.White
+                IconButton(
+                    onClick = {},
+                    modifier = Modifier
+                        .size(25.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF192650))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = "Notifications",
+                        tint = Color.White
+                    )
+                }
+                IconButton(
+                    onClick = {},
+                    modifier = Modifier
+                        .size(25.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF192650))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = "Profile",
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun TutorProfileScreen(viewModel: LoginViewModel, isTutor: Boolean, token: String) {
+        val context = LocalContext.current
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Header(modifier = Modifier.height(IntrinsicSize.Min))
+
+            // Profile Picture
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF1A2546)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "A",
+                    fontSize = 36.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
                 )
             }
-            IconButton(onClick = {},
-                modifier = Modifier
-                    .size(25.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF192650))
 
+            Spacer(modifier = Modifier.height(8.dp))
 
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = "Profile",
-                    tint = Color.White
-                )
-            }
+            Text(text = "Alejandro Hernandez", fontSize = 20.sp, fontWeight = FontWeight.Bold)
 
-        }
-    }
-}
+            Spacer(modifier = Modifier.height(8.dp))
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TutorProfileScreen(viewModel: LoginViewModel) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Header(modifier = Modifier.height(IntrinsicSize.Min))
-
-        // Profile Picture
-        Box(
-            modifier = Modifier
-                .size(100.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF1A2546)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = "A", fontSize = 36.sp, color = Color.White, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(text = "Alejandro Hernandez", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Rating Stars
-        Row {
-            repeat(4) {
-                Icon(imageVector = Icons.Default.Favorite, contentDescription = "Star", tint = Color(0xFF1A2546))
-            }
-            Icon(imageVector = Icons.Default.FavoriteBorder, contentDescription = "Star", tint = Color(0xFF1A2546))
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Contact Info
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.Call, contentDescription = "Phone", tint = Color(0xFF1A2546))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "3045748603", fontSize = 16.sp)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Specialty
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.Create, contentDescription = "Specialty", tint = Color(0xFF1A2546))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Mobile development, Business Intelligence", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Reviews
-        repeat(4) {
-            TutorReviewItem()
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Write Review Button
-        Button(
-            onClick = { },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
-        ) {
-            Text(text = "Write a review", color = Color.White, fontSize = 16.sp)
-        }
-    }
-}
-
-@Composable
-private fun TutorReviewItem() {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF1A2546)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = "A", color = Color.White, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Column {
+            // Rating Stars
             Row {
                 repeat(4) {
-                    Icon(imageVector = Icons.Default.Favorite, contentDescription = "Star", tint = Color(0xFF1A2546))
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = "Star",
+                        tint = Color(0xFF1A2546)
+                    )
                 }
-                Icon(imageVector = Icons.Default.FavoriteBorder, contentDescription = "Star", tint = Color(0xFF1A2546))
+                Icon(
+                    imageVector = Icons.Default.FavoriteBorder,
+                    contentDescription = "Star",
+                    tint = Color(0xFF1A2546)
+                )
             }
-            Text(text = "Supporting line text lorem ipsum dolor sit amet, consectetur.")
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Contact Info
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Call,
+                    contentDescription = "Phone",
+                    tint = Color(0xFF1A2546)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "3045748603", fontSize = 16.sp)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Specialty
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Create,
+                    contentDescription = "Specialty",
+                    tint = Color(0xFF1A2546)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Mobile development, Business Intelligence",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (isTutor) {
+                Spacer(modifier = Modifier.height(16.dp))
+                IconButton(
+                    onClick = { val intent = Intent(context, AddCourseActivity::class.java)
+                        context.startActivity(intent)},
+                    modifier = Modifier
+                        .size(25.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF192650))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add course",
+                        tint = Color.White
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Reviews
+            repeat(4) {
+                TutorReviewItem()
+            }
+
+            if (!isTutor) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Write Review Button
+                Button(
+                    onClick = { },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
+                ) {
+                    Text(text = "Write a review", color = Color.White, fontSize = 16.sp)
+                }
+            }
         }
     }
-}
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewTutorProfileScreen(viewModel: LoginViewModel = viewModel()) {
-    TutorProfileScreen(viewModel)
+    @Composable
+    fun TutorReviewItem() {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF1A2546)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "A", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Column {
+                Row {
+                    repeat(4) {
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = "Star",
+                            tint = Color(0xFF1A2546)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.FavoriteBorder,
+                        contentDescription = "Star",
+                        tint = Color(0xFF1A2546)
+                    )
+                }
+                Text(text = "Supporting line text lorem ipsum dolor sit amet, consectetur.")
+            }
+        }
+    }
+
+    @Preview(showBackground = true)
+    @Composable
+    fun PreviewTutorProfileScreen(viewModel: LoginViewModel = viewModel()) {
+        TutorProfileScreen(viewModel, true, "")
+    }
 }

@@ -2,6 +2,8 @@
 
 package com.tutorapp.views
 
+import android.annotation.SuppressLint
+import android.content.Intent
 import com.tutorapp.viewModels.LoginViewModel
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -20,147 +22,165 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import com.tutorapp.TutorsAndReviewsActivity
+import com.tutorapp.viewModels.AddCourseViewModel
 
 class AddCourseActivity : ComponentActivity() {
-    private val loginViewModel: LoginViewModel by viewModels()
+    private val addCourseViewModel: AddCourseViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            AddCourseScreen(loginViewModel)
+            AddCourseScreen(addCourseViewModel)
         }
     }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AddCourseScreen(viewModel: LoginViewModel) {
-    var expandedUniversity by remember { mutableStateOf(false) }
-    var expandedCourse by remember { mutableStateOf(false) }
-    var selectedUniversity by remember { mutableStateOf("") }
-    var selectedCourse by remember { mutableStateOf("") }
-    var priceState by remember { mutableStateOf("") }
-    val universities = listOf("Universidad de los Andes", "Universidad del Rosario")
-    val coursesByUniversity = mapOf(
-        "Universidad de los Andes" to listOf("Construcción de Aplicaciones Móviles", "Programación con tecnologías web"),
-        "Universidad del Rosario" to listOf("Redes de Computadores", "Optimización")
-    )
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text("TutorApp", style = MaterialTheme.typography.headlineLarge)
+    @SuppressLint("ProduceStateDoesNotAssignValue")
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun AddCourseScreen(viewModel: AddCourseViewModel) {
+        var expandedUniversity by remember { mutableStateOf(false) }
+        var expandedCourse by remember { mutableStateOf(false) }
+        var selectedUniversity by remember { mutableStateOf("") }
+        var selectedCourse by remember { mutableStateOf("") }
+        var priceState by remember { mutableStateOf("") }
+        var suggestedPrice by remember { mutableStateOf(0) }
 
-        Text(
-            text = "Add a new course!",
-            modifier = Modifier
-                .fillMaxWidth() // Makes it take full width
-                .padding(top = 32.dp), // Adds top margin
-            textAlign = TextAlign.Center, // Centers the text
-            style = MaterialTheme.typography.headlineMedium
+        val universities = listOf("Universidad de los Andes", "Universidad del Rosario")
+        val coursesByUniversity = mapOf(
+            "Universidad de los Andes" to listOf(
+                "Construcción de Aplicaciones Móviles",
+                "Programación con tecnologías web"
+            ),
+            "Universidad del Rosario" to listOf("Redes de Computadores", "Optimización")
         )
-        Spacer(modifier = Modifier.height(16.dp))
 
-        ExposedDropdownMenuBox(
-            expanded = expandedUniversity,
-            onExpandedChange = { expandedUniversity = !expandedUniversity }
-        ) {
-            OutlinedTextField(
-                value = selectedUniversity,
-                onValueChange = {},
-                label = { Text("University") },
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedUniversity) },
-                modifier = Modifier.menuAnchor().fillMaxWidth()
+        val context = LocalContext.current
+
+
+        val searchResult by produceState<Map<String, Map<String, List<Int>>>>(initialValue = emptyMap()) {
+            viewModel.getSearchResults({ success, response -> response
+            })
+        }
+
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("TutorApp", style = MaterialTheme.typography.headlineLarge)
+
+            Text(
+                text = "Add a new course!",
+                modifier = Modifier
+                    .fillMaxWidth() // Makes it take full width
+                    .padding(top = 32.dp), // Adds top margin
+                textAlign = TextAlign.Center, // Centers the text
+                style = MaterialTheme.typography.headlineMedium
             )
-            ExposedDropdownMenu(
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ExposedDropdownMenuBox(
                 expanded = expandedUniversity,
-                onDismissRequest = { expandedUniversity = false }
+                onExpandedChange = { expandedUniversity = !expandedUniversity }
             ) {
-                universities.forEach { university ->
-                    DropdownMenuItem(
-                        text = { Text(university) },
-                        onClick = {
-                            selectedUniversity = university
-                            selectedCourse = ""
-                            expandedUniversity = false
-                        }
-                    )
+                OutlinedTextField(
+                    value = selectedUniversity,
+                    onValueChange = {},
+                    label = { Text("University") },
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedUniversity) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedUniversity,
+                    onDismissRequest = { expandedUniversity = false }
+                ) {
+                    universities.forEach { university ->
+                        DropdownMenuItem(
+                            text = { Text(university) },
+                            onClick = {
+                                selectedUniversity = university
+                                selectedCourse = ""
+                                expandedUniversity = false
+                            }
+                        )
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        ExposedDropdownMenuBox(
-            expanded = expandedCourse,
-            onExpandedChange = { expandedCourse = !expandedCourse },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            OutlinedTextField(
-                value = selectedCourse,
-                onValueChange = {},
-                label = { Text("Course") },
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCourse) },
-                modifier = Modifier.menuAnchor().fillMaxWidth()
-            )
-            ExposedDropdownMenu(
+            ExposedDropdownMenuBox(
                 expanded = expandedCourse,
-                onDismissRequest = { expandedCourse = false }
+                onExpandedChange = { expandedCourse = !expandedCourse },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                coursesByUniversity[selectedUniversity]?.forEach { course ->
-                    DropdownMenuItem(
-                        text = { Text(course) },
-                        onClick = {
-                            selectedCourse = course
-                            expandedCourse = false
-                        }
-                    )
+                OutlinedTextField(
+                    value = selectedCourse,
+                    onValueChange = {},
+                    label = { Text("Course") },
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCourse) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedCourse,
+                    onDismissRequest = { expandedCourse = false }
+                ) {
+                    coursesByUniversity[selectedUniversity]?.forEach { course ->
+                        DropdownMenuItem(
+                            text = { Text(course) },
+                            onClick = {
+                                selectedCourse = course
+                                expandedCourse = false
+                            }
+                        )
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(
-            value = priceState,
-            onValueChange = {
-                priceState = it.replace(Regex("[^0-9]"), "") // Remove non-numeric characters
-            },
-            label = { Text("Set the price (COP/hour)") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions.Default.copy(
-                keyboardType = KeyboardType.Number // Restrict keyboard to numeric
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = priceState,
+                onValueChange = {
+                    priceState = it.replace(Regex("[^0-9]"), "") // Remove non-numeric characters
+                },
+                label = { Text("Set the price (COP/hour)") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    keyboardType = KeyboardType.Number // Restrict keyboard to numeric
+                )
             )
-        )
 
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Hint: Tutors that use our price estimator increased their students in 20%. ",
-            style = MaterialTheme.typography.bodyMedium
-        )
+            Text(
+                text = "Hint: Tutors that use our price estimator increased their students in 20%. ",
+                style = MaterialTheme.typography.bodyMedium
+            )
 
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Button(
-            onClick = { /* TODO: Implement estimator logic */ },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
-        ) {
-            Text("Use the estimator")
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp), // Optional top padding
-            horizontalAlignment = Alignment.CenterHorizontally // Centers items horizontally
-        ) {
-            Spacer(modifier = Modifier.height(4.dp)) // Space between buttons
+            Spacer(modifier = Modifier.height(4.dp))
 
             Button(
-                onClick = { /* TODO: Save course */ },
+                onClick = { /* TODO: Implement estimator logic */ },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
             ) {
-                Text("Save")
+                Text("Use the estimator")
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp), // Optional top padding
+                horizontalAlignment = Alignment.CenterHorizontally // Centers items horizontally
+            ) {
+                Spacer(modifier = Modifier.height(4.dp)) // Space between buttons
+
+                Button(
+                    onClick = {
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
+                ) {
+                    Text("Save")
+                }
             }
         }
     }
