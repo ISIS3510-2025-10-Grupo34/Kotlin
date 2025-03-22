@@ -22,7 +22,7 @@ import com.tutorapp.showTutors.ShowTutorsActivity
 import com.tutorapp.showTutors.ShowTutorsViewModel
 import com.tutorapp.ui.theme.TutorAppTheme
 
-class MainActivity : ComponentActivity() {
+class TutorsAndReviewsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
