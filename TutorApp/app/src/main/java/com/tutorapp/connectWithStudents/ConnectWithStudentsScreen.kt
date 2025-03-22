@@ -25,7 +25,13 @@ import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import android.util.Log
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import kotlin.math.*
 
 
@@ -88,10 +94,23 @@ fun NearestUniversityFinder(modifier: Modifier, context: Context) {
         "Universidad Javeriana" to Pair(4.6308434, -74.0816096),
     )
 
+
+    val notificationId = 1
+    val channelId = "message_channel"
+
+    var hasNotificationPermission by remember { mutableStateOf(checkNotificationPermission(context)) }
+
+    val requestPermissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            hasNotificationPermission = isGranted
+        }
+
     LaunchedEffect(Unit) {
         getCurrentLocation(context, fusedLocationClient) { userLocation ->
             nearestUniversity = findNearestUniversity(userLocation, universities)
         }
+
+        createNotificationChannel(context, channelId)
     }
 
 
@@ -134,12 +153,16 @@ fun NearestUniversityFinder(modifier: Modifier, context: Context) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = {  },
+                onClick = { if (hasNotificationPermission) {
+                    sendNotification(context, channelId, notificationId, title, message, place)
+                } else {
+                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A3F)),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.padding(8.dp)
             ) {
-                Text(text = "Send", color = Color.White)
+                Text(if (hasNotificationPermission) "Send" else "Request Permission", color = Color.White)
             }
         }
     }
@@ -208,5 +231,57 @@ fun RequestLocationPermission(onGranted: () -> Unit) {
         } else {
             onGranted()
         }
+    }
+}
+
+
+fun checkNotificationPermission(context: Context): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        ActivityCompat.checkSelfPermission(
+            context, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    } else {
+        true
+    }
+}
+
+
+fun createNotificationChannel(context: Context, channelId: String) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val name = "Message Channel"
+        val descriptionText = "Channel for form messages"
+        val importance = NotificationManager.IMPORTANCE_DEFAULT
+        val channel = NotificationChannel(channelId, name, importance).apply {
+            description = descriptionText
+        }
+        val notificationManager: NotificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+    }
+}
+
+fun sendNotification(context: Context, channelId: String, notificationId: Int, title: String, message: String, place: String) {
+    val notificationBuilder = NotificationCompat.Builder(context, channelId)
+        .setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setContentTitle(title.ifEmpty { "New Message" })
+        .setContentText("$message (Place: $place)")
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+    with(NotificationManagerCompat.from(context)) {
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
+        notify(notificationId, notificationBuilder.build())
     }
 }
