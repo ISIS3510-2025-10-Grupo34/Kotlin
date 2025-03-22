@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import com.tutorapp.TutorsAndReviewsActivity
+import com.tutorapp.showTutors.ShowTutorsActivity
 import com.tutorapp.ui.theme.Typography
 import org.json.JSONObject
 
@@ -101,7 +103,7 @@ fun LoginScreen(viewModel: LoginViewModel) {
                         Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
 
 
-                        val intent = Intent(context, HomeActivity::class.java).apply {
+                        val intent = Intent(context, TutorsAndReviewsActivity::class.java).apply {
                             putExtra("TOKEN_KEY", message)
                         }
                         context.startActivity(intent)
