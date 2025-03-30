@@ -44,7 +44,7 @@ class StudentProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val studentId = intent.getStringExtra("STUDENT_ID") ?: return
+        val studentId = intent.getStringExtra("ID") ?: return
 
         setContent {
             val viewModel: StudentProfileViewModel = viewModel()

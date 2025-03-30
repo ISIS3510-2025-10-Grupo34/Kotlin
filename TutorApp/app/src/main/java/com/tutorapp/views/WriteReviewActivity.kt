@@ -43,7 +43,7 @@ class WriteReviewActivity : ComponentActivity() {
 }
 
 @Composable
-fun Header(modifier: Modifier){
+fun Header2(modifier: Modifier){
     Row (modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween){
         Text("TutorApp", modifier = Modifier
             .weight(1f)
@@ -105,7 +105,7 @@ fun WriteReviewScreen(viewModel: LoginViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Header(modifier = Modifier.height(IntrinsicSize.Min))
+        Header2(modifier = Modifier.height(IntrinsicSize.Min))
 
         Text("Write a review", fontSize = 24.sp, color = Color(0xFF1A2340))
 
@@ -168,7 +168,7 @@ fun WriteReviewScreen(viewModel: LoginViewModel) {
 }
 
 @Composable
-fun TutorReviewItem() {
+fun TutorReviewItem2() {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Box(
             modifier = Modifier

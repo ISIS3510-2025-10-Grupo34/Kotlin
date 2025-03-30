@@ -1,4 +1,4 @@
-package com.tutorapp.showTutors.data.network.response
+package com.tutorapp.models
 
 data class TutorResponse (
     val id: Int,

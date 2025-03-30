@@ -43,7 +43,7 @@ class TutorProfileActivity : ComponentActivity() {
 }
 
 @Composable
-fun Header(modifier: Modifier){
+fun TutorProfileHeader(modifier: Modifier){
     Row (modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween){
         Text("TutorApp", modifier = Modifier
             .weight(1f)
@@ -100,7 +100,7 @@ fun TutorProfileScreen(viewModel: LoginViewModel) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Header(modifier = Modifier.height(IntrinsicSize.Min))
+        TutorProfileHeader(modifier = Modifier.height(IntrinsicSize.Min))
 
         // Profile Picture
         Box(

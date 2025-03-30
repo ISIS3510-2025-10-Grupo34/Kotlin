@@ -1,7 +1,7 @@
 package com.tutorapp.showTutors.domain
 
 import com.tutorapp.showTutors.data.ShowTutorsRepository
-import com.tutorapp.showTutors.data.network.response.TutorResponse
+import com.tutorapp.models.TutorResponse
 
 class ShowTutorsUseCase {
     private val repository = ShowTutorsRepository()
