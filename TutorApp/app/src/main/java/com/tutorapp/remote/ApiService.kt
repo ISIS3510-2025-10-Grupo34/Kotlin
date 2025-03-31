@@ -34,4 +34,10 @@ interface ApiService {
 
     @GET("search-results/")
     suspend fun getSearchResults(): Response<SearchResultResponse>
+
+    @GET("course-estimate-price/")
+    suspend fun getPriceEstimation(
+        @Query("tutorId") tutorId: Int,
+        @Query("courseUniversityName") courseUniversityName: String
+    ): Response<PriceEstimationResponse>
 }

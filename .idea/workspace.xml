@@ -10,9 +10,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="202002ec-d4e2-48e8-8df7-0feb6b7f6706" name="Changes" comment="redirect to tutor profile if is tutor user">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/remote/ApiService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/remote/ApiService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/viewModels/AddCourseViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/viewModels/AddCourseViewModel.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/views/AddCourseActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/views/AddCourseActivity.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/views/TutorPofileActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/views/TutorPofileActivity.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

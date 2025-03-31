@@ -5,6 +5,7 @@ package com.tutorapp.views
 import android.content.Intent
 import com.tutorapp.viewModels.LoginViewModel
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -22,12 +23,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import com.google.gson.Gson
+import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.viewModels.AddCourseViewModel
 
 class AddCourseActivity : ComponentActivity() {
     private val addCourseViewModel: AddCourseViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val currentUserInfo: LoginTokenDecoded? = intent.getParcelableExtra("TOKEN_KEY")
         addCourseViewModel.getSearchResults() { success, data ->
             if (success) {
                 val universities: List<String> = data?.keys?.toList() ?: emptyList()
@@ -36,11 +39,11 @@ class AddCourseActivity : ComponentActivity() {
                 } ?: emptyMap()
 
                 setContent {
-                    AddCourseScreen(addCourseViewModel, universities, coursesByUniversity)
+                    AddCourseScreen(addCourseViewModel, universities, coursesByUniversity, currentUserInfo)
                 }
             } else {
                 setContent {
-                    AddCourseScreen(addCourseViewModel, emptyList(), emptyMap())
+                    AddCourseScreen(addCourseViewModel, emptyList(), emptyMap(), currentUserInfo)
                 }
             }
         }
@@ -49,12 +52,13 @@ class AddCourseActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddCourseScreen(viewModel: AddCourseViewModel, universities: List<String>, coursesByUniversity: Map<String, List<String>>) {
+fun AddCourseScreen(viewModel: AddCourseViewModel, universities: List<String>, coursesByUniversity: Map<String, List<String>>, currentUserInfo: LoginTokenDecoded?) {
     var expandedUniversity by remember { mutableStateOf(false) }
     var expandedCourse by remember { mutableStateOf(false) }
     var selectedUniversity by remember { mutableStateOf("") }
     var selectedCourse by remember { mutableStateOf("") }
     var priceState by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text("TutorApp", style = MaterialTheme.typography.headlineLarge)
@@ -153,7 +157,15 @@ fun AddCourseScreen(viewModel: AddCourseViewModel, universities: List<String>, c
         Spacer(modifier = Modifier.height(4.dp))
 
         Button(
-            onClick = { /* TODO: Implement estimator logic */ },
+            onClick = {
+                if (currentUserInfo != null) {
+                    viewModel.getPriceEstimation(currentUserInfo.id, selectedUniversity) { success, estimatedPrice ->
+                        if (success) {
+                            priceState = estimatedPrice.toString()
+                        }
+                    }
+                }
+            },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
         ) {
             Text("Use the estimator")
@@ -168,7 +180,12 @@ fun AddCourseScreen(viewModel: AddCourseViewModel, universities: List<String>, c
             Spacer(modifier = Modifier.height(4.dp)) // Space between buttons
 
             Button(
-                onClick = { /* TODO: Save course */ },
+                onClick = {
+                    val intent = Intent(context, TutorProfileActivity::class.java).apply {
+                        putExtra("TOKEN_KEY", currentUserInfo)
+                    }
+                    context.startActivity(intent)
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
             ) {
                 Text("Save")
