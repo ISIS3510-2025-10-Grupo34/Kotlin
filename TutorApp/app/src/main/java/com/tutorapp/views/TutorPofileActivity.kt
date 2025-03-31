@@ -2,6 +2,7 @@
 
 package com.tutorapp.views
 
+import android.content.Intent
 import com.tutorapp.viewModels.LoginViewModel
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -20,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Favorite
@@ -27,17 +29,21 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tutorapp.models.LoginTokenDecoded
+import com.tutorapp.viewModels.TutorProfileViewModel
 
 class TutorProfileActivity : ComponentActivity() {
-    private val loginViewModel: LoginViewModel by viewModels()
+    private val tutorProfileViewModel: TutorProfileViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val currentUserInfo: LoginTokenDecoded? = intent.getParcelableExtra("TOKEN_KEY")
         setContent {
-            TutorProfileScreen(loginViewModel)
+            TutorProfileScreen(tutorProfileViewModel, currentUserInfo)
         }
     }
 }
@@ -92,7 +98,9 @@ fun TutorProfileHeader(modifier: Modifier){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TutorProfileScreen(viewModel: LoginViewModel) {
+fun TutorProfileScreen(viewModel: TutorProfileViewModel, currentUserInfo: LoginTokenDecoded?) {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -116,6 +124,7 @@ fun TutorProfileScreen(viewModel: LoginViewModel) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(text = "Alejandro Hernandez", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(text = "Universidad de los Andes", fontSize = 16.sp, fontWeight = FontWeight.Thin)
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -138,11 +147,35 @@ fun TutorProfileScreen(viewModel: LoginViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Specialty
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(imageVector = Icons.Default.Create, contentDescription = "Specialty", tint = Color(0xFF1A2546))
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "Mobile development, Business Intelligence", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+
+        if (currentUserInfo?.role == "tutor") {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    val intent = Intent(context, AddCourseActivity::class.java).apply {
+                        putExtra("TOKEN_KEY", currentUserInfo)
+                    }
+                    context.startActivity(intent)
+                },
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Specialty",
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Add a subject", fontSize = 16.sp)
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -152,16 +185,18 @@ fun TutorProfileScreen(viewModel: LoginViewModel) {
             TutorReviewItem()
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        if (currentUserInfo?.role == "student") {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Write Review Button
-        Button(
-            onClick = { },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
-        ) {
-            Text(text = "Write a review", color = Color.White, fontSize = 16.sp)
+            // Write Review Button
+            Button(
+                onClick = { },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
+            ) {
+                Text(text = "Write a review", color = Color.White, fontSize = 16.sp)
+            }
         }
     }
 }
@@ -195,6 +230,6 @@ fun TutorReviewItem() {
 
 @Preview(showBackground = true)
 @Composable
-fun PreviewTutorProfileScreen(viewModel: LoginViewModel = viewModel()) {
-    TutorProfileScreen(viewModel)
+fun PreviewTutorProfileScreen(viewModel: TutorProfileViewModel = viewModel()) {
+    TutorProfileScreen(viewModel, null)
 }

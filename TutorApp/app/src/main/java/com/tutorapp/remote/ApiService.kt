@@ -32,6 +32,6 @@ interface ApiService {
     @GET("majors/")
     suspend fun majors(): Response<MajorsResponse>
 
-
-
+    @GET("search-results/")
+    suspend fun getSearchResults(): Response<SearchResultResponse>
 }

@@ -2,6 +2,7 @@
 
 package com.tutorapp.views
 
+import android.content.Intent
 import com.tutorapp.viewModels.LoginViewModel
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -20,30 +21,40 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import com.google.gson.Gson
+import com.tutorapp.viewModels.AddCourseViewModel
 
 class AddCourseActivity : ComponentActivity() {
-    private val loginViewModel: LoginViewModel by viewModels()
+    private val addCourseViewModel: AddCourseViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            AddCourseScreen(loginViewModel)
+        addCourseViewModel.getSearchResults() { success, data ->
+            if (success) {
+                val universities: List<String> = data?.keys?.toList() ?: emptyList()
+                val coursesByUniversity: Map<String, List<String>> = data?.mapValues { entry ->
+                    entry.value.keys.toList()
+                } ?: emptyMap()
+
+                setContent {
+                    AddCourseScreen(addCourseViewModel, universities, coursesByUniversity)
+                }
+            } else {
+                setContent {
+                    AddCourseScreen(addCourseViewModel, emptyList(), emptyMap())
+                }
+            }
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddCourseScreen(viewModel: LoginViewModel) {
+fun AddCourseScreen(viewModel: AddCourseViewModel, universities: List<String>, coursesByUniversity: Map<String, List<String>>) {
     var expandedUniversity by remember { mutableStateOf(false) }
     var expandedCourse by remember { mutableStateOf(false) }
     var selectedUniversity by remember { mutableStateOf("") }
     var selectedCourse by remember { mutableStateOf("") }
     var priceState by remember { mutableStateOf("") }
-    val universities = listOf("Universidad de los Andes", "Universidad del Rosario")
-    val coursesByUniversity = mapOf(
-        "Universidad de los Andes" to listOf("Construcción de Aplicaciones Móviles", "Programación con tecnologías web"),
-        "Universidad del Rosario" to listOf("Redes de Computadores", "Optimización")
-    )
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text("TutorApp", style = MaterialTheme.typography.headlineLarge)
