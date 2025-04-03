@@ -2,6 +2,7 @@ package com.tutorapp.views
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
@@ -46,6 +47,7 @@ import com.tutorapp.ui.theme.TutorAppTheme
 import com.tutorapp.viewModels.ShowTutorsViewModel
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.platform.LocalContext
+import com.tutorapp.models.TutorsResponse
 import org.json.JSONObject
 
 class ShowTutorsActivity: ComponentActivity(){
@@ -56,7 +58,7 @@ class ShowTutorsActivity: ComponentActivity(){
         setContent {
             TutorAppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    ShowTutorsScreen(Modifier.padding(innerPadding), ShowTutorsViewModel(),token)
+                    ShowTutorsScreen(Modifier.padding(innerPadding), showTutorsViewModel,token)
                 }
             }
         }
@@ -161,19 +163,18 @@ fun FilterResultsButton(modifier: Modifier){
 
 @Composable
 fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel){
-    val exampleTutor = TutorResponse(
+    val exampleTutorResponse = TutorResponse(
         id = 0,
         name = "Example Tutor Name",
         email = "example@example.com",
-        subject = "Example suibject",
-        title = "Example title",
-        description = "Example description.",
-        reviews_score = 0.0f,
-        image_url = "http://imgfz.com/i/pk1F9ca.jpeg"
+        area_of_expertise = "Example course",
+        major = "Example major",
+        phone_number = "573333333333",
+        university = "Example University"
     )
-    val exampleList : List<TutorResponse> = listOf(exampleTutor)
+    val exampleTutorsResponse = TutorsResponse (listOf(exampleTutorResponse))
     showTutorsViewModel.onStart()
-    val tutors: List<TutorResponse> by showTutorsViewModel.tutors.observeAsState(initial = exampleList)
+    val tutorsResponse: TutorsResponse by showTutorsViewModel.tutors.observeAsState(initial = exampleTutorsResponse)
     val scrollState = rememberScrollState()
 
     Column(modifier = modifier
@@ -181,7 +182,7 @@ fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMode
             .verticalScroll(scrollState)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)){
-        tutors.forEach {
+        tutorsResponse.tutors.forEach {
             tutor -> TutorCard(modifier = Modifier, tutor = tutor)
         }
     }
@@ -224,7 +225,7 @@ fun TutorCard(modifier: Modifier, tutor: TutorResponse) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // Image Placeholder (Box)
-        Box(
+        /*Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(120.dp)
@@ -238,25 +239,25 @@ fun TutorCard(modifier: Modifier, tutor: TutorResponse) {
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))*/
 
         // Information Section (Column)
         Column {
             Text(
-                text = tutor.subject,
+                text = tutor.university,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
-            Text(
-                text = tutor.title,
+            /*Text(
+                text = tutor.major,
                 fontSize = 14.sp,
                 color = Color.Gray
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
+            Spacer(modifier = Modifier.height(8.dp))*/
+            /*Text(
                 text = tutor.description,
                 fontSize = 14.sp
-            )
+            )*/
         }
 
         Spacer(modifier = Modifier.height(16.dp))
