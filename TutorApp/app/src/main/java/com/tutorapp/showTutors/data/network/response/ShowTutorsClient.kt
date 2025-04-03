@@ -1,5 +1,6 @@
 package com.tutorapp.showTutors.data.network.response
 
+import com.tutorapp.models.TutorResponse
 import retrofit2.http.GET
 
 interface ShowTutorsClient {

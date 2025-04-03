@@ -1,5 +1,9 @@
-package com.tutorapp.showTutors
+package com.tutorapp.views
 
+import android.content.Intent
+import android.os.Bundle
+import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +29,7 @@ import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -36,42 +41,69 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import com.tutorapp.showTutors.data.network.response.TutorResponse
+import com.tutorapp.models.TutorResponse
+import com.tutorapp.ui.theme.TutorAppTheme
+import com.tutorapp.viewModels.ShowTutorsViewModel
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.platform.LocalContext
+import org.json.JSONObject
+
+class ShowTutorsActivity: ComponentActivity(){
+    private val showTutorsViewModel: ShowTutorsViewModel by viewModels()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val token = intent.getStringExtra("TOKEN_KEY") ?: ""
+        setContent {
+            TutorAppTheme {
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    ShowTutorsScreen(Modifier.padding(innerPadding), ShowTutorsViewModel(),token)
+                }
+            }
+        }
+    }
 
 
+}
 @Composable
-fun ShowTutorsActivity(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel){
-
+fun ShowTutorsScreen(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel,token: String){
     Column (modifier = modifier.fillMaxSize(1f)){
-        Header(modifier = Modifier.height(IntrinsicSize.Min))
+        TutorScreenHeader(modifier = Modifier.height(IntrinsicSize.Min),token)
+        Spacer(modifier = Modifier.height(20.dp))
         FilterResultsButton(modifier = Modifier)
         ListOfTutorCards(modifier = modifier, showTutorsViewModel)
     }
 
 }
 
+
 @Composable
-fun Header(modifier: Modifier){
-    Row (modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween){
-        Text("TutorApp", modifier = Modifier
-            .weight(1f)
-            .padding(horizontal = 15.dp, vertical = 15.dp),
-            fontSize = 35.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Row (modifier = Modifier
-            .weight(0.5f)
+fun TutorScreenHeader(modifier: Modifier,token: String) {
+    val context = LocalContext.current
+    Row(
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 25.dp, vertical = 35.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "TutorApp",
+            fontSize = 20.sp,
+            color = Color.Black,
+            fontWeight = FontWeight.Bold
+        )
 
-            , horizontalArrangement = Arrangement.Absolute.SpaceBetween
-        ){
-            IconButton(onClick = {},
-            modifier = Modifier
-                .size(25.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF192650))
-
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(25.dp) // Espacio uniforme entre iconos
+        ) {
+            IconButton(
+                onClick = {
+                    }
+                ,
+                modifier = Modifier
+                    .size(35.dp) // Tamaño más visible
+                    .clip(CircleShape)
+                    .background(Color(0xFF192650))
             ) {
                 Icon(
                     imageVector = Icons.Default.Notifications,
@@ -79,13 +111,25 @@ fun Header(modifier: Modifier){
                     tint = Color.White
                 )
             }
-            IconButton(onClick = {},
+
+            IconButton(
+                onClick = {val jsonToken = JSONObject(token)
+                    val role = jsonToken.get("role").toString()
+                    val id = jsonToken.get("id").toString()
+
+                    val intent = Intent(
+                        context,
+                        if (role == "tutor") TutorProfileActivity::class.java else StudentProfileActivity::class.java
+                    ).apply {
+                        putExtra("ID", id)
+                    }
+
+                    context.startActivity(intent)
+                },
                 modifier = Modifier
-                    .size(25.dp)
+                    .size(35.dp)
                     .clip(CircleShape)
                     .background(Color(0xFF192650))
-
-
             ) {
                 Icon(
                     imageVector = Icons.Default.AccountCircle,
@@ -93,10 +137,10 @@ fun Header(modifier: Modifier){
                     tint = Color.White
                 )
             }
-
         }
     }
 }
+
 
 
 @Composable
@@ -116,7 +160,7 @@ fun FilterResultsButton(modifier: Modifier){
 }
 
 @Composable
-fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel ){
+fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel){
     val exampleTutor = TutorResponse(
         id = 0,
         name = "Example Tutor Name",

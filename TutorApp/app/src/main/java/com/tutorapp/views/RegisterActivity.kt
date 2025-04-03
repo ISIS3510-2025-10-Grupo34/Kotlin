@@ -18,6 +18,7 @@ import com.tutorapp.ui.theme.Typography
 import androidx.compose.foundation.Image
 import android.net.Uri
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.ArrowDropDown
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -143,7 +144,14 @@ fun StudentRegisterScreen(name: String, university: String, major: String, email
     var emailState by rememberSaveable { mutableStateOf(email) }
     var passwordState by rememberSaveable { mutableStateOf(password) }
     val fieldModifier = Modifier.fillMaxWidth(0.9f)
-
+    var expanded by remember { mutableStateOf(false) }
+    val universities = listOf(
+        "Universidad Nacional",
+        "Universidad de los Andes",
+        "Pontificia Universidad Javeriana",
+        "Universidad del Rosario",
+        "Universidad de la Sabana"
+    )
 
     Column(
         modifier = Modifier
@@ -179,14 +187,36 @@ fun StudentRegisterScreen(name: String, university: String, major: String, email
             minLines = 1
         )
 
-        OutlinedTextField(
-            value = universityState,
-            onValueChange = { universityState = it },
-            label = { Text("University") },
-            modifier = fieldModifier,
-            singleLine = true,
-            minLines = 1
-        )
+        Box {
+            OutlinedTextField(
+                value = universityState,
+                onValueChange = {},
+                label = { Text("University") },
+                modifier = fieldModifier,
+                readOnly = true, // Hace que no sea editable manualmente
+                trailingIcon = {
+                    IconButton(onClick = { expanded = !expanded }) {
+                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+                    }
+                }
+            )
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                universities.forEach { university ->
+                    DropdownMenuItem(
+                        text = { Text(university) },
+                        onClick = {
+                            universityState = university
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
 
         OutlinedTextField(
             value = majorState,
@@ -242,25 +272,117 @@ fun TutorRegisterScreen(name: String, university: String, expertise: String, ema
     var passwordState by rememberSaveable { mutableStateOf(password) }
     var phoneNumberState by rememberSaveable { mutableStateOf(phoneNumber) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("TutorApp", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Start))
+    var expanded by remember { mutableStateOf(false) }
+    val universities = listOf(
+        "Universidad Nacional",
+        "Universidad de los Andes",
+        "Pontificia Universidad Javeriana",
+        "Universidad del Rosario",
+        "Universidad de la Sabana"
+    )
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            "TutorApp",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.Start)
+        )
+
         Spacer(modifier = Modifier.height(60.dp))
+
         Text("Tutor", style = Typography.titleLarge)
-        Text("We would like to know more about you", style = Typography.bodyLarge, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
-        OutlinedTextField(value = nameState, onValueChange = { nameState = it }, label = { Text("First and last name") },
-            modifier = fieldModifier)
-        OutlinedTextField(value = universityState, onValueChange = { universityState = it }, label = { Text("University") },
-            modifier = fieldModifier)
-        OutlinedTextField(value = expertiseState, onValueChange = { expertiseState = it }, label = { Text("Area of expertise") },
-            modifier = fieldModifier)
-        OutlinedTextField(value = emailState, onValueChange = { emailState = it }, label = { Text("Email") },
-            modifier = fieldModifier)
-        OutlinedTextField(value = passwordState, onValueChange = { passwordState = it }, label = { Text("Password") },
-            modifier = fieldModifier)
-        OutlinedTextField(value = phoneNumberState, onValueChange = { phoneNumberState = it }, label = { Text("Phone number") },
-            modifier = fieldModifier)
-        Button(onClick = { onDetailsEntered(nameState, universityState, expertiseState, emailState, passwordState, phoneNumberState) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)), shape = RoundedCornerShape(50), modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp)) { Text("Continue", color = Color.White) }
+        Text(
+            "We would like to know more about you",
+            style = Typography.bodyLarge,
+            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+        )
+
+        OutlinedTextField(
+            value = nameState,
+            onValueChange = { nameState = it },
+            label = { Text("First and last name") },
+            modifier = fieldModifier
+        )
+
+        // Dropdown para seleccionar Universidad
+        Box {
+            OutlinedTextField(
+                value = universityState,
+                onValueChange = {},
+                label = { Text("University") },
+                modifier = fieldModifier,
+                readOnly = true, // Hace que no sea editable manualmente
+                trailingIcon = {
+                    IconButton(onClick = { expanded = !expanded }) {
+                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+                    }
+                }
+            )
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                universities.forEach { university ->
+                    DropdownMenuItem(
+                        text = { Text(university) },
+                        onClick = {
+                            universityState = university
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = expertiseState,
+            onValueChange = { expertiseState = it },
+            label = { Text("Area of expertise") },
+            modifier = fieldModifier
+        )
+
+        OutlinedTextField(
+            value = emailState,
+            onValueChange = { emailState = it },
+            label = { Text("Email") },
+            modifier = fieldModifier
+        )
+
+        OutlinedTextField(
+            value = passwordState,
+            onValueChange = { passwordState = it },
+            label = { Text("Password") },
+            modifier = fieldModifier
+        )
+
+        OutlinedTextField(
+            value = phoneNumberState,
+            onValueChange = { phoneNumberState = it },
+            label = { Text("Phone number") },
+            modifier = fieldModifier
+        )
+
+        Button(
+            onClick = {
+                onDetailsEntered(
+                    nameState, universityState, expertiseState,
+                    emailState, passwordState, phoneNumberState
+                )
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)),
+            shape = RoundedCornerShape(50),
+            modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp)
+        ) {
+            Text("Continue", color = Color.White)
+        }
     }
+
 }
 @Composable
 fun LearningStylesScreen(selectedStyles: List<String>, onContinue: (List<String>) -> Unit) {
@@ -491,9 +613,6 @@ fun UploadIDScreen(
 
 
             } ?: Text("Tap to upload picture", color = Color.DarkGray)
-
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
@@ -534,6 +653,10 @@ fun UploadIDScreen(
         ) {
             Text("Create my account", color = Color.White)
         }
+
+        }
+
+
     }
 
 
