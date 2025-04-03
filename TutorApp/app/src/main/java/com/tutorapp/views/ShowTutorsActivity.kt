@@ -45,10 +45,19 @@ import com.tutorapp.models.TutorResponse
 import com.tutorapp.ui.theme.TutorAppTheme
 import com.tutorapp.viewModels.ShowTutorsViewModel
 import androidx.activity.ComponentActivity
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.tutorapp.models.TutoringSession
 import com.tutorapp.models.TutorsResponse
 import com.tutorapp.viewModels.TutoringSessionViewModel
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 class ShowTutorsActivity: ComponentActivity(){
@@ -73,8 +82,9 @@ fun ShowTutorsScreen(modifier: Modifier, tutoringSessionViewModel: TutoringSessi
     Column (modifier = modifier.fillMaxSize(1f)){
         TutorScreenHeader(modifier = Modifier.height(IntrinsicSize.Min),token)
         Spacer(modifier = Modifier.height(20.dp))
-        FilterResultsButton(modifier = Modifier)
+        FilterResultsButton(modifier = Modifier, tutoringSessionViewModel)
         ListOfTutorCards(modifier = modifier, tutoringSessionViewModel)
+
     }
 
 }
@@ -148,9 +158,11 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
 
 
 @Composable
-fun FilterResultsButton(modifier: Modifier){
+fun FilterResultsButton(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel){
+
+    var showBottomSheet by remember { mutableStateOf(false) }
     Row (modifier){
-        Button(onClick = {}, modifier.weight(1f)
+        Button(onClick = { showBottomSheet = true }, modifier.weight(1f)
             .padding(horizontal = 35.dp)
             , colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
         )
@@ -161,11 +173,18 @@ fun FilterResultsButton(modifier: Modifier){
         Column(modifier.weight(1f)) {  }
     }
 
+    if (showBottomSheet){
+        FilterBottomSheet(modifier=modifier, tutoringSessionViewModel,
+            onDismissRequest = { showBottomSheet = false }
+        )
+
+
+    }
+
 }
 
 @Composable
 fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel){
-
     tutoringSessionViewModel.getAllSessions {  }
     val sessions = tutoringSessionViewModel.sessions
     val scrollState = rememberScrollState()
@@ -250,6 +269,103 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession) {
             colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
         ) {
             Text(text = "Book")
+        }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterBottomSheet(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel,
+                      onDismissRequest: () -> Unit){
+
+    val coroutineScope = rememberCoroutineScope()
+    var universityName by remember { mutableStateOf("") }
+    var courseName by remember { mutableStateOf("") }
+    var professorName by remember { mutableStateOf("") }
+    var showSuggestions by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedTextField(
+                value = universityName,
+                onValueChange = { universityName = it },
+                label = { Text("University") },
+                trailingIcon = {
+                    if (universityName.isNotEmpty()) {
+                        IconButton(onClick = { universityName = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = courseName,
+                onValueChange = { courseName = it },
+                label = { Text("Course") },
+                trailingIcon = {
+                    if (courseName.isNotEmpty()) {
+                        IconButton(onClick = { courseName = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = professorName,
+                onValueChange = {
+                    professorName = it
+                    showSuggestions = it.isNotEmpty()
+                },
+                label = { Text("Professor") },
+                trailingIcon = {
+                    if (professorName.isNotEmpty()) {
+                        IconButton(onClick = {
+                            professorName = ""
+                            showSuggestions = false
+                        }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            /*if (showSuggestions) {
+                SuggestionDropdown(
+                    suggestions = listOf("Juan Hernandez", "Julián Rodriguez"),
+                    onSuggestionClick = { selectedSuggestion ->
+                        professorName = selectedSuggestion
+                        showSuggestions = false
+                    }
+                )
+            }*/
+
+            Button(
+                onClick =
+                { coroutineScope.launch {
+                    try{
+                        tutoringSessionViewModel.onFilterClick(universityName, courseName, professorName)
+                    }catch (e:Exception){
+                        println(e)
+                    }
+                }
+                },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text("Filter")
+            }
         }
     }
 }
