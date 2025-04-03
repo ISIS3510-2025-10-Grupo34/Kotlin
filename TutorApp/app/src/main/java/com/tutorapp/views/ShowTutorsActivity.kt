@@ -2,7 +2,6 @@ package com.tutorapp.views
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
@@ -59,6 +58,7 @@ class ShowTutorsActivity: ComponentActivity(){
             TutorAppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     ShowTutorsScreen(Modifier.padding(innerPadding), showTutorsViewModel,token)
+
                 }
             }
         }
@@ -164,6 +164,7 @@ fun FilterResultsButton(modifier: Modifier){
 @Composable
 fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel){
     val exampleTutorResponse = TutorResponse(
+
         id = 0,
         name = "Example Tutor Name",
         email = "example@example.com",

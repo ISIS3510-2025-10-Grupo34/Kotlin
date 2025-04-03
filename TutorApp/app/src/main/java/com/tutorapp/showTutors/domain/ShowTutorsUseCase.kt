@@ -1,7 +1,6 @@
 package com.tutorapp.showTutors.domain
 
 import com.tutorapp.showTutors.data.ShowTutorsRepository
-import com.tutorapp.models.TutorResponse
 import com.tutorapp.models.TutorsResponse
 
 class ShowTutorsUseCase {

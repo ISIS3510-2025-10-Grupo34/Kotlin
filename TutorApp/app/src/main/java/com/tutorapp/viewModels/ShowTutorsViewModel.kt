@@ -4,7 +4,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tutorapp.models.TutorResponse
 import com.tutorapp.models.TutorsResponse
 import com.tutorapp.showTutors.domain.ShowTutorsUseCase
 import kotlinx.coroutines.launch

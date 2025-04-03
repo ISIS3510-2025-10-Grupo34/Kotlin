@@ -1,6 +1,6 @@
 package com.tutorapp.showTutors.data.network.response
 
-import com.tutorapp.models.TutorResponse
+
 import com.tutorapp.models.TutorsResponse
 import com.tutorapp.showTutors.core.network.RetrofitHelper
 import kotlinx.coroutines.Dispatchers
