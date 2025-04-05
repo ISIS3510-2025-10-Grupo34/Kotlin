@@ -13,8 +13,6 @@ data class RegisterRequest(
     val university: RequestBody,
     val major: RequestBody?,
     val area_of_expertise: RequestBody?,
-    val is_admin: RequestBody,
-    val is_student: RequestBody,
-    val is_tutor: RequestBody,
+    val role:RequestBody? ,
     val learning_styles: RequestBody?
 )

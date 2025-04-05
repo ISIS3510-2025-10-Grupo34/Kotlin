@@ -2,9 +2,13 @@ package com.tutorapp.viewModels
 
 import android.content.Context
 import android.net.Uri
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tutorapp.remote.RetrofitClient
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -13,6 +17,10 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 
 class RegisterViewModel : ViewModel() {
+    private val _universities = MutableStateFlow<List<String>>(emptyList())
+    val universities: StateFlow<List<String>> = _universities
+    private val _majors = MutableStateFlow<List<String>>(emptyList())
+    val majors: StateFlow<List<String>> = _majors
     fun register(
         context: Context,
         name: String,
@@ -24,9 +32,7 @@ class RegisterViewModel : ViewModel() {
         university: String,
         major: String?,
         expertise: String?,
-        isAdmin: Boolean,
-        isStudent: Boolean,
-        isTutor: Boolean,
+        role: String,
         learningStyles: List<String>?,
         onResult: (Boolean, String) -> Unit
     ) {
@@ -57,9 +63,7 @@ class RegisterViewModel : ViewModel() {
                     "university" to RequestBody.create("text/plain".toMediaTypeOrNull(), university),
                     "major" to RequestBody.create("text/plain".toMediaTypeOrNull(), major ?: ""),
                     "area_of_expertise" to RequestBody.create("text/plain".toMediaTypeOrNull(), expertise ?: ""),
-                    "is_admin" to RequestBody.create("text/plain".toMediaTypeOrNull(), isAdmin.toString()),
-                    "is_student" to RequestBody.create("text/plain".toMediaTypeOrNull(), isStudent.toString()),
-                    "is_tutor" to RequestBody.create("text/plain".toMediaTypeOrNull(), isTutor.toString()),
+                    "role" to RequestBody.create("text/plain".toMediaTypeOrNull(), role),
                     "learning_styles" to RequestBody.create("text/plain".toMediaTypeOrNull(), learningStyles?.joinToString(",") ?: "")
                 )
 
@@ -76,5 +80,25 @@ class RegisterViewModel : ViewModel() {
                 onResult(false,e.message ?: "An error occurred")
             }
         }
+    }
+    fun universities(){
+        viewModelScope.launch {
+            val response = RetrofitClient.instance.universities()
+            println(response.body())
+            println("bbb")
+            response.body()?.let { _universities.value=it.universities }
+
+        }
+
+    }
+    fun majors(){
+        viewModelScope.launch {
+            val response = RetrofitClient.instance.majors()
+            println(response.body())
+            println("aaaa")
+            response.body()?.let { _majors.value=it.majors }
+
+        }
+
     }
 }
