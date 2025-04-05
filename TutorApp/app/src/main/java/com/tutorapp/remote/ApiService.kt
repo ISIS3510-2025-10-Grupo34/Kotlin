@@ -26,6 +26,12 @@ interface ApiService {
     @POST("studentprofile/")
     suspend fun studentProfile(@Body request: StudentProfileRequest): Response<StudentProfileResponse>
 
+    @GET("universities/")
+    suspend fun universities(): Response<UniversitiesResponse>
+
+    @GET("majors/")
+    suspend fun majors(): Response<MajorsResponse>
+
 
 
 }
