@@ -184,7 +184,7 @@ fun AddCourseScreen(
             )
         )
         Text(
-            text = "Hint: Tutors that use our price estimator increased their students in 20%. ",
+            text = "Hint: Tutors that use our price estimator increased their students in 20%",
             style = MaterialTheme.typography.bodyMedium
         )
 
@@ -236,7 +236,7 @@ fun AddCourseScreen(
                     if (!regex.matches(dateTimeAvailability)) {
                         Toast.makeText(
                             context,
-                            "El campo debe tener el formato DD/MM/AAAA-HH:MM",
+                            "This field must meet the format: DD/MM/AAAA-HH:MM",
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
