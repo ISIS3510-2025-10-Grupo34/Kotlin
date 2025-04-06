@@ -1,12 +1,6 @@
 package com.tutorapp.remote
 
-
-
-import com.tutorapp.models.StudentProfileRequest
-import com.tutorapp.models.StudentProfileResponse
 import com.tutorapp.models.*
-
-
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -32,6 +26,15 @@ interface ApiService {
     @GET("majors/")
     suspend fun majors(): Response<MajorsResponse>
 
+    @GET("search-results/")
+    suspend fun getSearchResults(): Response<SearchResultResponse>
 
+    @GET("course-estimate-price/")
+    suspend fun getPriceEstimation(
+        @Query("tutorId") tutorId: Int,
+        @Query("courseUniversityName") courseUniversityName: String
+    ): Response<PriceEstimationResponse>
 
+    @POST("tutoring-sessions/")
+    suspend fun postTutoringSession(@Body request: PostTutoringSessionRequest): Response<PostTutoringSessionResponse>
 }
