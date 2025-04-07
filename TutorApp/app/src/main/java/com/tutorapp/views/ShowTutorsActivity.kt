@@ -235,13 +235,13 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession) {
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "Precio: $"+tutoringSession.cost.toString(),
+                text = "Price: $"+tutoringSession.cost.toString(),
                 fontSize = 14.sp,
                 color = Color.Gray
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Fecha: "+tutoringSession.date_time,
+                text = "Date: "+tutoringSession.date_time,
                 fontSize = 14.sp
             )
         }
