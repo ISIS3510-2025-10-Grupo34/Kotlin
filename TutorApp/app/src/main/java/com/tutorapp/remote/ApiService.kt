@@ -32,6 +32,7 @@ interface ApiService {
     @GET("majors/")
     suspend fun majors(): Response<MajorsResponse>
 
-
+    @GET("tutoring-sessions-with-names/")
+    suspend fun tutoringSessions(): Response<List<TutoringSession>>
 
 }

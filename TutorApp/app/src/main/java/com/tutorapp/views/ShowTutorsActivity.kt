@@ -46,18 +46,20 @@ import com.tutorapp.ui.theme.TutorAppTheme
 import com.tutorapp.viewModels.ShowTutorsViewModel
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.platform.LocalContext
+import com.tutorapp.models.TutoringSession
 import com.tutorapp.models.TutorsResponse
+import com.tutorapp.viewModels.TutoringSessionViewModel
 import org.json.JSONObject
 
 class ShowTutorsActivity: ComponentActivity(){
-    private val showTutorsViewModel: ShowTutorsViewModel by viewModels()
+    private val tutoringSessionViewModel: TutoringSessionViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val token = intent.getStringExtra("TOKEN_KEY") ?: ""
         setContent {
             TutorAppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    ShowTutorsScreen(Modifier.padding(innerPadding), showTutorsViewModel,token)
+                    ShowTutorsScreen(Modifier.padding(innerPadding), tutoringSessionViewModel,token)
 
                 }
             }
@@ -67,12 +69,12 @@ class ShowTutorsActivity: ComponentActivity(){
 
 }
 @Composable
-fun ShowTutorsScreen(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel,token: String){
+fun ShowTutorsScreen(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel,token: String){
     Column (modifier = modifier.fillMaxSize(1f)){
         TutorScreenHeader(modifier = Modifier.height(IntrinsicSize.Min),token)
         Spacer(modifier = Modifier.height(20.dp))
         FilterResultsButton(modifier = Modifier)
-        ListOfTutorCards(modifier = modifier, showTutorsViewModel)
+        ListOfTutorCards(modifier = modifier, tutoringSessionViewModel)
     }
 
 }
@@ -162,7 +164,7 @@ fun FilterResultsButton(modifier: Modifier){
 }
 
 @Composable
-fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel){
+fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel){
     val exampleTutorResponse = TutorResponse(
 
         id = 0,
@@ -174,8 +176,8 @@ fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMode
         university = "Example University"
     )
     val exampleTutorsResponse = TutorsResponse (listOf(exampleTutorResponse))
-    showTutorsViewModel.onStart()
-    val tutorsResponse: TutorsResponse by showTutorsViewModel.tutors.observeAsState(initial = exampleTutorsResponse)
+    tutoringSessionViewModel.getAllSessions {  }
+    val sessions = tutoringSessionViewModel.sessions
     val scrollState = rememberScrollState()
 
     Column(modifier = modifier
@@ -183,15 +185,15 @@ fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMode
             .verticalScroll(scrollState)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)){
-        tutorsResponse.tutors.forEach {
-            tutor -> TutorCard(modifier = Modifier, tutor = tutor)
+        sessions.forEach {
+            tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession)
         }
     }
 }
 
 
 @Composable
-fun TutorCard(modifier: Modifier, tutor: TutorResponse) {
+fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -210,14 +212,14 @@ fun TutorCard(modifier: Modifier, tutor: TutorResponse) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = tutor.name[0].uppercase(),
+                    text = tutoringSession.tutor[0].uppercase(),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = tutor.name,
+                text = tutoringSession.tutor,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -225,40 +227,23 @@ fun TutorCard(modifier: Modifier, tutor: TutorResponse) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Image Placeholder (Box)
-        /*Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp)
-                , // Lighter Gray
-            contentAlignment = Alignment.Center
-        ) {
-
-            AsyncImage(
-                model = tutor.image_url,
-                contentDescription = null
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))*/
-
         // Information Section (Column)
         Column {
             Text(
-                text = tutor.university,
+                text = tutoringSession.course,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
-            /*Text(
-                text = tutor.major,
+            Text(
+                text = "Precio: $"+tutoringSession.cost.toString(),
                 fontSize = 14.sp,
                 color = Color.Gray
             )
-            Spacer(modifier = Modifier.height(8.dp))*/
-            /*Text(
-                text = tutor.description,
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Fecha: "+tutoringSession.date_time,
                 fontSize = 14.sp
-            )*/
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
