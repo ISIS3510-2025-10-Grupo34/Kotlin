@@ -3,27 +3,32 @@ package com.tutorapp.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tutorapp.models.LoginRequest
+import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.remote.RetrofitClient
 import kotlinx.coroutines.launch
 import android.util.Base64
-import org.json.JSONObject
-
+import android.util.Log
+import com.google.gson.Gson
 
 class LoginViewModel : ViewModel() {
-    fun login(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
+    fun login(email: String, password: String, onResult: (Boolean, LoginTokenDecoded?) -> Unit) {
         viewModelScope.launch {
             try {
                 val response = RetrofitClient.instance.login(LoginRequest(email, password))
+
                 if (response.isSuccessful) {
-
                     val token = decodeJwt(response.body()?.data?.token)
-                    onResult(true, token)
-
+                    if (token != null) {
+                        val tokenFormatted = Gson().fromJson(token, LoginTokenDecoded::class.java)
+                        onResult(true, tokenFormatted)
+                    } else {
+                        onResult(false, null)
+                    }
                 } else {
-                    onResult(false, response.errorBody()?.string() ?: "Login failed")
+                    onResult(false, null)
                 }
             } catch (e: Exception) {
-                onResult(false, e.message)
+                onResult(false, null)
             }
         }
     }
