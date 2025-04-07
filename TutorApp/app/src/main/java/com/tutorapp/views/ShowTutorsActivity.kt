@@ -2,6 +2,7 @@ package com.tutorapp.views
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
@@ -64,13 +65,48 @@ class ShowTutorsActivity: ComponentActivity(){
     private val tutoringSessionViewModel: TutoringSessionViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         tutoringSessionViewModel.getAllSessions {  }
+
         super.onCreate(savedInstanceState)
         val token = intent.getStringExtra("TOKEN_KEY") ?: ""
-        setContent {
-            TutorAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    ShowTutorsScreen(Modifier.padding(innerPadding), tutoringSessionViewModel,token)
 
+        tutoringSessionViewModel.getSearchResults(){sucess, data ->
+            if(sucess){
+                val universities: List<UniversitySimple> = data?.data?.map { (uniName, uni) ->
+                    UniversitySimple(name = uniName, id = uni.id)
+                } ?: emptyList()
+
+                val coursesByUniversity: Map<String, List<CourseSimple>>? = data?.data?.mapValues { (_, uni) ->
+                    uni.courses.map { (courseName, course) ->
+                        CourseSimple(courseName = courseName, id = course.id)
+                    }
+                }
+                val tutorsByCourse: Map<String, List<String>>? = data?.data?.flatMap { (_, university) ->
+                    university.courses.map { (courseName, course) ->
+                    courseName to course.tutors_names
+                }
+                }?.toMap()
+
+
+
+                Log.i("universities", universities.toString() )
+                Log.i("courses", coursesByUniversity.toString())
+                Log.i("tutors", tutorsByCourse.toString())
+                setContent{
+                    TutorAppTheme {
+                        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                            ShowTutorsScreen(Modifier.padding(innerPadding), tutoringSessionViewModel,token, universities, coursesByUniversity, tutorsByCourse)
+
+                        }
+                    }
+                }
+            }else {
+                setContent{
+                    TutorAppTheme {
+                        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                            ShowTutorsScreen(Modifier.padding(innerPadding), tutoringSessionViewModel,token, emptyList(), emptyMap(), emptyMap())
+
+                        }
+                    }
                 }
             }
         }
@@ -79,11 +115,12 @@ class ShowTutorsActivity: ComponentActivity(){
 
 }
 @Composable
-fun ShowTutorsScreen(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel,token: String){
+fun ShowTutorsScreen(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel,token: String, universities: List<UniversitySimple>,
+                     coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
     Column (modifier = modifier.fillMaxSize(1f)){
         TutorScreenHeader(modifier = Modifier.height(IntrinsicSize.Min),token)
         Spacer(modifier = Modifier.height(20.dp))
-        FilterResultsButton(modifier = Modifier, tutoringSessionViewModel)
+        FilterResultsButton(modifier = Modifier, tutoringSessionViewModel, universities, coursesByUniversity, tutorsByCourse)
         ListOfTutorCards(modifier = modifier, tutoringSessionViewModel)
 
     }
@@ -159,7 +196,8 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
 
 
 @Composable
-fun FilterResultsButton(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel){
+fun FilterResultsButton(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel, universities: List<UniversitySimple>,
+                        coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
 
     var showBottomSheet by remember { mutableStateOf(false) }
     Row (modifier){
@@ -176,7 +214,7 @@ fun FilterResultsButton(modifier: Modifier, tutoringSessionViewModel: TutoringSe
 
     if (showBottomSheet){
         FilterBottomSheet(modifier=modifier, tutoringSessionViewModel,
-            onDismissRequest = { showBottomSheet = false }
+            onDismissRequest = { showBottomSheet = false }, universities, coursesByUniversity, tutorsByCourse
         )
 
 
@@ -278,7 +316,8 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterBottomSheet(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel,
-                      onDismissRequest: () -> Unit){
+                      onDismissRequest: () -> Unit, universities: List<UniversitySimple>,
+                      coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
 
     val coroutineScope = rememberCoroutineScope()
     var universityName by remember { mutableStateOf("") }

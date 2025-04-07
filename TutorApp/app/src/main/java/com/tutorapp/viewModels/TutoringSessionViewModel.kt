@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tutorapp.models.SearchResultFilterResponse
+import com.tutorapp.models.SearchResultResponse
 import com.tutorapp.models.TutoringSession
 import com.tutorapp.models.TutorsResponse
 import com.tutorapp.remote.RetrofitClient
@@ -51,45 +53,37 @@ class TutoringSessionViewModel : ViewModel() {
     }
 
     suspend fun onFilterClick(university:String, course:String, professor:String){
-        Log.i("atributos", university+" "+course+" "+professor)
         val response = RetrofitClient.instance.tutoringSessions()
         if(university.isNotEmpty()  && professor.isNotEmpty() && course.isNotEmpty()){
-        Log.i("body del response", response.body().toString())
             val filteredList = mutableListOf<TutoringSession>()
-
             for (element in response.body() ?: emptyList()){
                 if(element.tutor.contains(professor, ignoreCase = true) && element.course.contains(course, ignoreCase = true) && element.university.contains(university, ignoreCase = true)){
                     filteredList.add(element)
                 }
-
             }
-
-
-
-            Log.i("filtered list: ", filteredList.toString())
             sessions = filteredList
         }
-        /**else if(university.isNotEmpty() && course.isNotEmpty()) {
-        val filteredList = tutorList.filter { tutor ->
-        tutor.university.contains(university, ignoreCase = true) &&
-        tutor.course.contains(course, ignoreCase = true)
-        }
-        _tutors.value = filteredList
-        // Handle the case where one or more parameters are empty
-        // You might want to show an error message or load all tutors
-        // For example:
-        //onStart() // Load all tutors if any parameter is empty
-        }
-        else if(university.isNotEmpty() && professor.isNotEmpty()){
-        val filteredList = tutorList.filter { tutor ->
-        tutor.university.contains(university, ignoreCase = true) &&
-        tutor.name.contains(professor, ignoreCase = true)
-        }
-        _tutors.value = filteredList
-        }*/
+
         else{
             getAllSessions {  }
         }
 
     }
+
+    fun getSearchResults(onResult: (Boolean, SearchResultFilterResponse?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.instance.getSearchResultsFilter()
+
+                if (response.isSuccessful) {
+                    onResult(true, response.body())
+                } else {
+                    onResult(false, null)
+                }
+            } catch (e: Exception) {
+                onResult(false, null)
+            }
+        }
+    }
+
 }
