@@ -63,6 +63,7 @@ import org.json.JSONObject
 class ShowTutorsActivity: ComponentActivity(){
     private val tutoringSessionViewModel: TutoringSessionViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
+        tutoringSessionViewModel.getAllSessions {  }
         super.onCreate(savedInstanceState)
         val token = intent.getStringExtra("TOKEN_KEY") ?: ""
         setContent {
@@ -185,7 +186,7 @@ fun FilterResultsButton(modifier: Modifier, tutoringSessionViewModel: TutoringSe
 
 @Composable
 fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel){
-    tutoringSessionViewModel.getAllSessions {  }
+
     val sessions = tutoringSessionViewModel.sessions
     val scrollState = rememberScrollState()
 

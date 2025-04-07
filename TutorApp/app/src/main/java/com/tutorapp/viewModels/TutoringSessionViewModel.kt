@@ -1,5 +1,6 @@
 package com.tutorapp.viewModels
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -11,6 +12,7 @@ import com.tutorapp.remote.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.Normalizer
 
 class TutoringSessionViewModel : ViewModel() {
 
@@ -42,16 +44,29 @@ class TutoringSessionViewModel : ViewModel() {
         }
     }
 
+    fun String.normalize(): String {
+        return Normalizer.normalize(this, Normalizer.Form.NFD)
+            .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
+            .lowercase()
+    }
 
     suspend fun onFilterClick(university:String, course:String, professor:String){
+        Log.i("atributos", university+" "+course+" "+professor)
         val response = RetrofitClient.instance.tutoringSessions()
         if(university.isNotEmpty()  && professor.isNotEmpty() && course.isNotEmpty()){
-            val filteredList = response.body() ?: emptyList()
-            filteredList.filter { tutoringSession ->
-                tutoringSession.university.contains(university, ignoreCase = true) &&
-                        tutoringSession.tutor.contains(professor, ignoreCase = true)&&
-                        tutoringSession.course.contains(course, ignoreCase = true)
+        Log.i("body del response", response.body().toString())
+            val filteredList = mutableListOf<TutoringSession>()
+
+            for (element in response.body() ?: emptyList()){
+                if(element.tutor.contains(professor, ignoreCase = true) && element.course.contains(course, ignoreCase = true) && element.university.contains(university, ignoreCase = true)){
+                    filteredList.add(element)
+                }
+
             }
+
+
+
+            Log.i("filtered list: ", filteredList.toString())
             sessions = filteredList
         }
         /**else if(university.isNotEmpty() && course.isNotEmpty()) {
