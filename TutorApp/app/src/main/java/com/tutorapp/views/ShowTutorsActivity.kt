@@ -165,17 +165,7 @@ fun FilterResultsButton(modifier: Modifier){
 
 @Composable
 fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel){
-    val exampleTutorResponse = TutorResponse(
 
-        id = 0,
-        name = "Example Tutor Name",
-        email = "example@example.com",
-        area_of_expertise = "Example course",
-        major = "Example major",
-        phone_number = "573333333333",
-        university = "Example University"
-    )
-    val exampleTutorsResponse = TutorsResponse (listOf(exampleTutorResponse))
     tutoringSessionViewModel.getAllSessions {  }
     val sessions = tutoringSessionViewModel.sessions
     val scrollState = rememberScrollState()
@@ -231,6 +221,11 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession) {
         Column {
             Text(
                 text = tutoringSession.course,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = tutoringSession.university,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
