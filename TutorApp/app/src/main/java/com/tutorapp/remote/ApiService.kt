@@ -39,7 +39,9 @@ interface ApiService {
         @Query("courseUniversityName") courseUniversityName: String
     ): Response<PriceEstimationResponse>
 
-
     @POST("tutoring-sessions/")
     suspend fun postTutoringSession(@Body request: PostTutoringSessionRequest): Response<PostTutoringSessionResponse>
+
+    @GET("tutorprofile/")
+    suspend fun getTutorProfile(@Query("tutorId") tutorId: Int): Response<GetTutorProfileResponse>
 }
