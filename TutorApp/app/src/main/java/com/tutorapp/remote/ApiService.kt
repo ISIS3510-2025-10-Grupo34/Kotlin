@@ -46,4 +46,7 @@ interface ApiService {
     @GET("search-results-filter/")
     suspend fun getSearchResultsFilter(): Response<SearchResultFilterResponse>
 
+    @POST("increase-filter-count/")
+    suspend fun increaseFilterCount(@Body request: PostFilterCounterIncreaseRequest): Response<PostFilterCounterIncreaseResponse>
+
 }

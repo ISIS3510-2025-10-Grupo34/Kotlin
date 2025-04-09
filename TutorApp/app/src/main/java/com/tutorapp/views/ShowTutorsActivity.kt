@@ -47,7 +47,10 @@ import com.tutorapp.ui.theme.TutorAppTheme
 import com.tutorapp.viewModels.ShowTutorsViewModel
 import androidx.activity.ComponentActivity
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.mutableStateOf
@@ -320,83 +323,140 @@ fun FilterBottomSheet(modifier: Modifier, tutoringSessionViewModel: TutoringSess
                       coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
 
     val coroutineScope = rememberCoroutineScope()
-    var universityName by remember { mutableStateOf("") }
-    var courseName by remember { mutableStateOf("") }
-    var professorName by remember { mutableStateOf("") }
-    var showSuggestions by remember { mutableStateOf(false) }
+    var expandedUniversity by remember { mutableStateOf(false) }
+    var selectedUniversity by remember { mutableStateOf(mapOf(
+        "name" to "",
+        "id" to -1,
+    ))}
+    var expandedCourse by remember { mutableStateOf(false) }
+    var selectedCourse by remember { mutableStateOf(mapOf(
+        "name" to "",
+        "id" to -1,
+    )) }
+
+    var expandedTutor by remember { mutableStateOf(false) }
+    var selectedTutor by remember { mutableStateOf(mapOf(
+        "name" to ""
+    ))}
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OutlinedTextField(
-                value = universityName,
-                onValueChange = { universityName = it },
-                label = { Text("University") },
-                trailingIcon = {
-                    if (universityName.isNotEmpty()) {
-                        IconButton(onClick = { universityName = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Clear")
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
+        Column(modifier = Modifier.padding(16.dp)) {
 
-            OutlinedTextField(
-                value = courseName,
-                onValueChange = { courseName = it },
-                label = { Text("Course") },
-                trailingIcon = {
-                    if (courseName.isNotEmpty()) {
-                        IconButton(onClick = { courseName = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Clear")
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            OutlinedTextField(
-                value = professorName,
-                onValueChange = {
-                    professorName = it
-                    showSuggestions = it.isNotEmpty()
-                },
-                label = { Text("Professor") },
-                trailingIcon = {
-                    if (professorName.isNotEmpty()) {
-                        IconButton(onClick = {
-                            professorName = ""
-                            showSuggestions = false
-                        }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Clear")
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            /*if (showSuggestions) {
-                SuggestionDropdown(
-                    suggestions = listOf("Juan Hernandez", "Julián Rodriguez"),
-                    onSuggestionClick = { selectedSuggestion ->
-                        professorName = selectedSuggestion
-                        showSuggestions = false
-                    }
+            // Dropdown para University
+            ExposedDropdownMenuBox(
+                expanded = expandedUniversity,
+                onExpandedChange = { expandedUniversity = !expandedUniversity }
+            ) {
+                OutlinedTextField(
+                    value = selectedUniversity["name"].toString(),
+                    onValueChange = {},
+                    label = { Text("University") },
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedUniversity) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
-            }*/
+                ExposedDropdownMenu(
+                    expanded = expandedUniversity,
+                    onDismissRequest = { expandedUniversity = false }
+                ) {
+                    universities.forEach { university ->
+                        DropdownMenuItem(
+                            text = { Text(university.name) },
+                            onClick = {
+                                selectedUniversity = mapOf(
+                                    "name" to university.name,
+                                    "id" to university.id,
+                                )
+                                selectedCourse = mapOf(
+                                    "name" to "",
+                                    "id" to -1,
+                                )
+                                expandedUniversity = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Dropdown para Course
+            ExposedDropdownMenuBox(
+                expanded = expandedCourse,
+                onExpandedChange = { expandedCourse = !expandedCourse },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = selectedCourse["name"].toString(),
+                    onValueChange = {},
+                    label = { Text("Course") },
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCourse) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedCourse,
+                    onDismissRequest = { expandedCourse = false }
+                ) {
+                    coursesByUniversity!![selectedUniversity["name"]]?.forEach { course ->
+                        DropdownMenuItem(
+                            text = { Text(course.courseName) },
+                            onClick = {
+                                selectedCourse = mapOf(
+                                    "name" to course.courseName,
+                                    "id" to course.id,
+                                )
+                                expandedCourse = false
+                            }
+                        )
+                    }
+                }
+            }
+
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Dropdown para Tutor
+            ExposedDropdownMenuBox(
+                expanded = expandedTutor,
+                onExpandedChange = { expandedTutor = !expandedTutor },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = selectedTutor["name"].toString(),
+                    onValueChange = {},
+                    label = { Text("Tutor") },
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTutor) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedTutor,
+                    onDismissRequest = { expandedTutor = false }
+                ) {
+                    tutorsByCourse!![selectedCourse["name"]]?.forEach { tutor ->
+                        DropdownMenuItem(
+                            text = { Text(tutor) },
+                            onClick = {
+                                selectedTutor = mapOf(
+                                    "name" to tutor
+                                )
+                                expandedTutor = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick =
                 { coroutineScope.launch {
                     try{
-                        tutoringSessionViewModel.onFilterClick(universityName, courseName, professorName)
+                        tutoringSessionViewModel.onFilterClick(selectedUniversity["name"].toString(), selectedCourse["name"].toString(), selectedTutor["name"].toString())
                     }catch (e:Exception){
                         println(e)
                     }
@@ -407,5 +467,8 @@ fun FilterBottomSheet(modifier: Modifier, tutoringSessionViewModel: TutoringSess
                 Text("Filter")
             }
         }
+        Spacer(modifier = Modifier.height(30.dp))
+
     }
+
 }

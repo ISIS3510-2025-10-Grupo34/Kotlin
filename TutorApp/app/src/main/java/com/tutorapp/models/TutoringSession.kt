@@ -6,5 +6,6 @@ data class TutoringSession(
     val course: String,
     val university: String,
     val cost: Double,
-    val date_time: String
+    val date_time: String,
+    val student: String? = null
 )
