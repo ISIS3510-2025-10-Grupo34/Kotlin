@@ -68,8 +68,30 @@ class TutoringSessionViewModel : ViewModel() {
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
             sessions = filteredList
-
         }
+        else if(university.isNotEmpty() && professor.isNotEmpty()){
+            val filteredList = mutableListOf<TutoringSession>()
+            for (element in response.body() ?: emptyList()){
+                if(element.course.contains(professor, ignoreCase = true) && element.university.contains(university, ignoreCase = true)){
+                    filteredList.add(element)
+                }
+            }
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+            sessions = filteredList
+        }
+        else if(course.isNotEmpty() && professor.isNotEmpty()){
+            val filteredList = mutableListOf<TutoringSession>()
+            for (element in response.body() ?: emptyList()){
+                if(element.course.contains(professor, ignoreCase = true) && element.tutor.contains(professor, ignoreCase = true)){
+                    filteredList.add(element)
+                }
+            }
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+            sessions = filteredList
+        }
+
         else if(university.isNotEmpty()){
             val filteredList = mutableListOf<TutoringSession>()
             for (element in response.body() ?: emptyList()){
@@ -78,6 +100,26 @@ class TutoringSessionViewModel : ViewModel() {
                 }
             }
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+            sessions = filteredList
+        }
+        else if(professor.isNotEmpty()){
+            val filteredList = mutableListOf<TutoringSession>()
+            for (element in response.body() ?: emptyList()){
+                if(element.tutor.contains(professor, ignoreCase = true)){
+                    filteredList.add(element)
+                }
+            }
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+            sessions = filteredList
+        }
+        else if(course.isNotEmpty()){
+            val filteredList = mutableListOf<TutoringSession>()
+            for (element in response.body() ?: emptyList()){
+                if(element.course.contains(course, ignoreCase = true)){
+                    filteredList.add(element)
+                }
+            }
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
             sessions = filteredList
         }
 
