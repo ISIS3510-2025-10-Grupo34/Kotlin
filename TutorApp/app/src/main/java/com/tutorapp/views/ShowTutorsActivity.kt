@@ -231,7 +231,7 @@ fun FilterResultsButton(modifier: Modifier, tutoringSessionViewModel: TutoringSe
 }
 
 @Composable
-fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel, token:String){
+fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel, token: String){
 
     val sessions = tutoringSessionViewModel.sessions
     val scrollState = rememberScrollState()
