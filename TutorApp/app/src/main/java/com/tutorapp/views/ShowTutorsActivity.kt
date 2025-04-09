@@ -60,8 +60,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
+import com.google.gson.Gson
+import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.models.TutoringSession
+import com.tutorapp.models.TutorsResponse
 import com.tutorapp.viewModels.TutoringSessionViewModel
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -227,7 +231,7 @@ fun FilterResultsButton(modifier: Modifier, tutoringSessionViewModel: TutoringSe
 }
 
 @Composable
-fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel){
+fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel, token:String){
 
     val sessions = tutoringSessionViewModel.sessions
     val scrollState = rememberScrollState()
@@ -238,14 +242,14 @@ fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessi
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)){
         sessions.forEach {
-            tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession)
+            tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token)
         }
     }
 }
 
 
 @Composable
-fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession) {
+fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: String) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
@@ -256,7 +260,15 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession) {
             .padding(16.dp)
     ) {
         // Top Section (Row)
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+            .clickable {
+                val tokenFormatted = Gson().fromJson(token, LoginTokenDecoded::class.java)
+                val intent = Intent(context, TutorProfileActivity::class.java).apply {
+                    putExtra("TOKEN_KEY", tokenFormatted)
+                    putExtra("TUTOR_ID", tutoringSession.tutor_id.toInt())
+                }
+                context.startActivity(intent)
+            }) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
