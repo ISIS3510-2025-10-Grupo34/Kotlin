@@ -226,10 +226,26 @@ fun TutorProfileScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Mostrar las reseñas traídas de la API
         tutorProfileInfo.data.reviews.forEach { review ->
             TutorReviewItem(review)
+        }
+
+        if (currentUserInfo?.role == "student") {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = {
+                    val intent = Intent(context, WriteReviewActivity::class.java).apply {
+                        putExtra("TOKEN_KEY", currentUserInfo)
+                    }
+                    context.startActivity(intent)
+                },
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = "Write a review", fontSize = 16.sp)
+                }
+            }
         }
     }
 }

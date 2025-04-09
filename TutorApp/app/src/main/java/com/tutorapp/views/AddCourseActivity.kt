@@ -91,7 +91,7 @@ fun AddCourseScreen(
         Text("TutorApp", style = MaterialTheme.typography.headlineLarge)
 
         Text(
-            text = "Add a new course!",
+            text = "Create a tutoring session",
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 32.dp),
