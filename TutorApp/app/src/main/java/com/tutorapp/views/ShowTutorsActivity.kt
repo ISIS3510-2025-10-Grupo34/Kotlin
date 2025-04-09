@@ -46,6 +46,17 @@ import com.tutorapp.models.TutorResponse
 import com.tutorapp.ui.theme.TutorAppTheme
 import com.tutorapp.viewModels.ShowTutorsViewModel
 import androidx.activity.ComponentActivity
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
 import com.google.gson.Gson
@@ -53,18 +64,55 @@ import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.models.TutoringSession
 import com.tutorapp.models.TutorsResponse
 import com.tutorapp.viewModels.TutoringSessionViewModel
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 class ShowTutorsActivity: ComponentActivity(){
     private val tutoringSessionViewModel: TutoringSessionViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
+        tutoringSessionViewModel.getAllSessions {  }
+
         super.onCreate(savedInstanceState)
         val token = intent.getStringExtra("TOKEN_KEY") ?: ""
-        setContent {
-            TutorAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    ShowTutorsScreen(Modifier.padding(innerPadding), tutoringSessionViewModel,token)
 
+        tutoringSessionViewModel.getSearchResults(){sucess, data ->
+            if(sucess){
+                val universities: List<UniversitySimple> = data?.data?.map { (uniName, uni) ->
+                    UniversitySimple(name = uniName, id = uni.id)
+                } ?: emptyList()
+
+                val coursesByUniversity: Map<String, List<CourseSimple>>? = data?.data?.mapValues { (_, uni) ->
+                    uni.courses.map { (courseName, course) ->
+                        CourseSimple(courseName = courseName, id = course.id)
+                    }
+                }
+                val tutorsByCourse: Map<String, List<String>>? = data?.data?.flatMap { (_, university) ->
+                    university.courses.map { (courseName, course) ->
+                    courseName to course.tutors_names
+                }
+                }?.toMap()
+
+
+
+                Log.i("universities", universities.toString() )
+                Log.i("courses", coursesByUniversity.toString())
+                Log.i("tutors", tutorsByCourse.toString())
+                setContent{
+                    TutorAppTheme {
+                        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                            ShowTutorsScreen(Modifier.padding(innerPadding), tutoringSessionViewModel,token, universities, coursesByUniversity, tutorsByCourse)
+
+                        }
+                    }
+                }
+            }else {
+                setContent{
+                    TutorAppTheme {
+                        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                            ShowTutorsScreen(Modifier.padding(innerPadding), tutoringSessionViewModel,token, emptyList(), emptyMap(), emptyMap())
+
+                        }
+                    }
                 }
             }
         }
@@ -73,12 +121,13 @@ class ShowTutorsActivity: ComponentActivity(){
 
 }
 @Composable
-fun ShowTutorsScreen(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel,token: String){
+fun ShowTutorsScreen(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel,token: String, universities: List<UniversitySimple>,
+                     coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
     Column (modifier = modifier.fillMaxSize(1f)){
         TutorScreenHeader(modifier = Modifier.height(IntrinsicSize.Min),token)
         Spacer(modifier = Modifier.height(20.dp))
-        FilterResultsButton(modifier = Modifier)
-        ListOfTutorCards(modifier = modifier, tutoringSessionViewModel, token)
+        FilterResultsButton(modifier = Modifier, tutoringSessionViewModel, universities, coursesByUniversity, tutorsByCourse)
+        ListOfTutorCards(modifier = modifier, tutoringSessionViewModel)
     }
 
 }
@@ -152,9 +201,12 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
 
 
 @Composable
-fun FilterResultsButton(modifier: Modifier){
+fun FilterResultsButton(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel, universities: List<UniversitySimple>,
+                        coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
+
+    var showBottomSheet by remember { mutableStateOf(false) }
     Row (modifier){
-        Button(onClick = {}, modifier.weight(1f)
+        Button(onClick = { showBottomSheet = true }, modifier.weight(1f)
             .padding(horizontal = 35.dp)
             , colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
         )
@@ -165,12 +217,19 @@ fun FilterResultsButton(modifier: Modifier){
         Column(modifier.weight(1f)) {  }
     }
 
+    if (showBottomSheet){
+        FilterBottomSheet(modifier=modifier, tutoringSessionViewModel,
+            onDismissRequest = { showBottomSheet = false }, universities, coursesByUniversity, tutorsByCourse
+        )
+
+
+    }
+
 }
 
 @Composable
 fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel, token: String){
 
-    tutoringSessionViewModel.getAllSessions {  }
     val sessions = tutoringSessionViewModel.sessions
     val scrollState = rememberScrollState()
 
@@ -265,4 +324,162 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: Strin
             Text(text = "Book")
         }
     }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterBottomSheet(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel,
+                      onDismissRequest: () -> Unit, universities: List<UniversitySimple>,
+                      coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
+
+    val coroutineScope = rememberCoroutineScope()
+    var expandedUniversity by remember { mutableStateOf(false) }
+    var selectedUniversity by remember { mutableStateOf(mapOf(
+        "name" to "",
+        "id" to -1,
+    ))}
+    var expandedCourse by remember { mutableStateOf(false) }
+    var selectedCourse by remember { mutableStateOf(mapOf(
+        "name" to "",
+        "id" to -1,
+    )) }
+
+    var expandedTutor by remember { mutableStateOf(false) }
+    var selectedTutor by remember { mutableStateOf(mapOf(
+        "name" to ""
+    ))}
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+
+            // Dropdown para University
+            ExposedDropdownMenuBox(
+                expanded = expandedUniversity,
+                onExpandedChange = { expandedUniversity = !expandedUniversity }
+            ) {
+                OutlinedTextField(
+                    value = selectedUniversity["name"].toString(),
+                    onValueChange = {},
+                    label = { Text("University") },
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedUniversity) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedUniversity,
+                    onDismissRequest = { expandedUniversity = false }
+                ) {
+                    universities.forEach { university ->
+                        DropdownMenuItem(
+                            text = { Text(university.name) },
+                            onClick = {
+                                selectedUniversity = mapOf(
+                                    "name" to university.name,
+                                    "id" to university.id,
+                                )
+                                selectedCourse = mapOf(
+                                    "name" to "",
+                                    "id" to -1,
+                                )
+                                expandedUniversity = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Dropdown para Course
+            ExposedDropdownMenuBox(
+                expanded = expandedCourse,
+                onExpandedChange = { expandedCourse = !expandedCourse },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = selectedCourse["name"].toString(),
+                    onValueChange = {},
+                    label = { Text("Course") },
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCourse) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedCourse,
+                    onDismissRequest = { expandedCourse = false }
+                ) {
+                    coursesByUniversity!![selectedUniversity["name"]]?.forEach { course ->
+                        DropdownMenuItem(
+                            text = { Text(course.courseName) },
+                            onClick = {
+                                selectedCourse = mapOf(
+                                    "name" to course.courseName,
+                                    "id" to course.id,
+                                )
+                                expandedCourse = false
+                            }
+                        )
+                    }
+                }
+            }
+
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Dropdown para Tutor
+            ExposedDropdownMenuBox(
+                expanded = expandedTutor,
+                onExpandedChange = { expandedTutor = !expandedTutor },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = selectedTutor["name"].toString(),
+                    onValueChange = {},
+                    label = { Text("Tutor") },
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTutor) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedTutor,
+                    onDismissRequest = { expandedTutor = false }
+                ) {
+                    tutorsByCourse!![selectedCourse["name"]]?.forEach { tutor ->
+                        DropdownMenuItem(
+                            text = { Text(tutor) },
+                            onClick = {
+                                selectedTutor = mapOf(
+                                    "name" to tutor
+                                )
+                                expandedTutor = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick =
+                { coroutineScope.launch {
+                    try{
+                        tutoringSessionViewModel.onFilterClick(selectedUniversity["name"].toString(), selectedCourse["name"].toString(), selectedTutor["name"].toString())
+                    }catch (e:Exception){
+                        println(e)
+                    }
+                }
+                },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text("Filter")
+            }
+        }
+        Spacer(modifier = Modifier.height(30.dp))
+
+    }
+
 }
