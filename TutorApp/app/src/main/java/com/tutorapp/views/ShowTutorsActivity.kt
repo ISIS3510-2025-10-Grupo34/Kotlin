@@ -127,7 +127,7 @@ fun ShowTutorsScreen(modifier: Modifier, tutoringSessionViewModel: TutoringSessi
         TutorScreenHeader(modifier = Modifier.height(IntrinsicSize.Min),token)
         Spacer(modifier = Modifier.height(20.dp))
         FilterResultsButton(modifier = Modifier, tutoringSessionViewModel, universities, coursesByUniversity, tutorsByCourse)
-        ListOfTutorCards(modifier = modifier, tutoringSessionViewModel)
+        ListOfTutorCards(modifier = modifier, tutoringSessionViewModel, token)
     }
 
 }
