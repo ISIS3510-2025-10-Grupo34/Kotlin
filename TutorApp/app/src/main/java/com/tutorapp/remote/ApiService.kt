@@ -39,14 +39,17 @@ interface ApiService {
         @Query("courseUniversityName") courseUniversityName: String
     ): Response<PriceEstimationResponse>
 
-
     @POST("tutoring-sessions/")
     suspend fun postTutoringSession(@Body request: PostTutoringSessionRequest): Response<PostTutoringSessionResponse>
 
+  
     @GET("search-results-filter/")
     suspend fun getSearchResultsFilter(): Response<SearchResultFilterResponse>
 
     @POST("increase-filter-count/")
     suspend fun increaseFilterCount(@Body request: PostFilterCounterIncreaseRequest): Response<PostFilterCounterIncreaseResponse>
 
+    @GET("tutorprofile/")
+    suspend fun getTutorProfile(@Query("tutorId") tutorId: Int): Response<GetTutorProfileResponse>
+  
 }
