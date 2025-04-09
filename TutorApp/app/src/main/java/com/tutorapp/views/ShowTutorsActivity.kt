@@ -1,6 +1,7 @@
 package com.tutorapp.views
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
@@ -46,7 +47,9 @@ import com.tutorapp.models.TutorResponse
 import com.tutorapp.ui.theme.TutorAppTheme
 import com.tutorapp.viewModels.ShowTutorsViewModel
 import androidx.activity.ComponentActivity
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -59,7 +62,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.tutorapp.models.TutoringSession
-import com.tutorapp.models.TutorsResponse
 import com.tutorapp.viewModels.TutoringSessionViewModel
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -125,7 +127,6 @@ fun ShowTutorsScreen(modifier: Modifier, tutoringSessionViewModel: TutoringSessi
         Spacer(modifier = Modifier.height(20.dp))
         FilterResultsButton(modifier = Modifier, tutoringSessionViewModel, universities, coursesByUniversity, tutorsByCourse)
         ListOfTutorCards(modifier = modifier, tutoringSessionViewModel)
-
     }
 
 }
@@ -210,7 +211,7 @@ fun FilterResultsButton(modifier: Modifier, tutoringSessionViewModel: TutoringSe
         )
 
         {
-            Text("Filter results")
+            Text("Filter results", color = Color.White)
         }
         Column(modifier.weight(1f)) {  }
     }
@@ -245,6 +246,7 @@ fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessi
 
 @Composable
 fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -306,11 +308,14 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession) {
 
         // Button
         Button(
-            onClick = { /* Handle booking */ },
+            onClick = { val url = "https://wa.me/573502318015" // Asegúrate de usar el formato internacional sin signos
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                context.startActivity(intent) },
             modifier = Modifier.align(Alignment.End),
-            colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
-        ) {
-            Text(text = "Book")
+            shape = RoundedCornerShape(50),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
+            ) {
+            Text(text = "Book", fontSize = 16.sp, color = Color.White)
         }
     }
 }
@@ -339,6 +344,10 @@ fun FilterBottomSheet(modifier: Modifier, tutoringSessionViewModel: TutoringSess
         "name" to ""
     ))}
 
+    var isUniversitySelected = selectedUniversity["name"] != ""
+    var isCourseSelected = selectedCourse["name"] != ""
+    var isTutorSelected = selectedTutor["name"] != ""
+
     ModalBottomSheet(
         onDismissRequest = onDismissRequest
     ) {
@@ -361,22 +370,95 @@ fun FilterBottomSheet(modifier: Modifier, tutoringSessionViewModel: TutoringSess
                     expanded = expandedUniversity,
                     onDismissRequest = { expandedUniversity = false }
                 ) {
-                    universities.forEach { university ->
-                        DropdownMenuItem(
-                            text = { Text(university.name) },
-                            onClick = {
-                                selectedUniversity = mapOf(
-                                    "name" to university.name,
-                                    "id" to university.id,
-                                )
-                                selectedCourse = mapOf(
-                                    "name" to "",
-                                    "id" to -1,
-                                )
-                                expandedUniversity = false
+                    if(isCourseSelected && isTutorSelected){
+                        val matchingUniversities = coursesByUniversity
+                            ?.filter { (_, courses) ->
+                                courses.any { course ->
+                                    course.courseName == selectedCourse["name"] &&
+                                            tutorsByCourse?.get(course.courseName)?.contains(selectedTutor["name"]) == true
+                                }
                             }
-                        )
+                            ?.keys
+
+                        matchingUniversities?.forEach { university ->
+                            DropdownMenuItem(
+                                text = { Text(university) },
+                                onClick = {
+                                    selectedUniversity = mapOf(
+                                        "name" to university
+                                    )
+                                    expandedUniversity = false
+                                    isUniversitySelected = true
+                                }
+                            )
+                        }
+
+
                     }
+                    else if(isTutorSelected){
+                        val universitiesWithTutor = coursesByUniversity
+                            ?.filter { (_, courses) ->
+                                courses.any { course ->
+                                    val tutors = tutorsByCourse?.get(course.courseName).orEmpty()
+                                    selectedTutor["name"] in tutors
+                                }
+                            }
+                            ?.keys
+
+                        universitiesWithTutor?.forEach { university ->
+                            DropdownMenuItem(
+                                text = { Text(university) },
+                                onClick = {
+                                    selectedUniversity = mapOf(
+                                        "name" to university
+                                    )
+                                    expandedUniversity = false
+                                    isUniversitySelected = true
+                                }
+                            )
+                        }
+                    }
+                    else if(isCourseSelected){
+
+                        val universitiesWithCourse = coursesByUniversity
+                            ?.filter { (_, courses) ->
+                                courses.any { it.courseName == selectedCourse["name"] }
+                            }?.keys
+
+
+                        universitiesWithCourse?.forEach { university ->
+                                DropdownMenuItem(
+                                    text = { Text(university) },
+                                    onClick = {
+                                        selectedUniversity = mapOf(
+                                            "name" to university
+                                        )
+                                        expandedUniversity = false
+                                        isUniversitySelected = true
+                                    }
+                                )
+                        }
+                    }
+                    else{
+                        universities.forEach { university ->
+                            DropdownMenuItem(
+                                text = { Text(university.name) },
+                                onClick = {
+                                    selectedUniversity = mapOf(
+                                        "name" to university.name,
+                                        "id" to university.id,
+                                    )
+                                    selectedCourse = mapOf(
+                                        "name" to "",
+                                        "id" to -1,
+                                    )
+                                    expandedUniversity = false
+                                    isUniversitySelected = true
+                                }
+                            )
+                        }
+                    }
+
                 }
             }
 
@@ -400,18 +482,84 @@ fun FilterBottomSheet(modifier: Modifier, tutoringSessionViewModel: TutoringSess
                     expanded = expandedCourse,
                     onDismissRequest = { expandedCourse = false }
                 ) {
-                    coursesByUniversity!![selectedUniversity["name"]]?.forEach { course ->
-                        DropdownMenuItem(
-                            text = { Text(course.courseName) },
-                            onClick = {
-                                selectedCourse = mapOf(
-                                    "name" to course.courseName,
-                                    "id" to course.id,
-                                )
-                                expandedCourse = false
+                    if(isUniversitySelected && isTutorSelected){
+                        val matchingCourses = coursesByUniversity!![selectedUniversity["name"]]
+                            ?.filter { course ->
+                                tutorsByCourse!![course.courseName]?.contains(selectedTutor["name"]) == true
                             }
-                        )
+
+                        matchingCourses?.forEach { course ->
+                            DropdownMenuItem(
+                                text = { Text(course.courseName) },
+                                onClick = {
+                                    selectedCourse = mapOf(
+                                        "name" to course.courseName
+                                    )
+                                    expandedCourse = false
+                                    isCourseSelected = true
+                                }
+                            )
+                        }
+
                     }
+
+                    else if(isUniversitySelected){
+
+                        coursesByUniversity!![selectedUniversity["name"]]?.forEach { course ->
+                            DropdownMenuItem(
+                                text = { Text(course.courseName) },
+                                onClick = {
+                                    selectedCourse = mapOf(
+                                        "name" to course.courseName
+                                    )
+                                    expandedCourse = false
+                                    isCourseSelected = true
+                                }
+                            )
+                        }
+                    }
+                    else if(isTutorSelected){
+                        val coursesByTutor = tutorsByCourse
+                            ?.filter { (_, tutors) ->
+                                selectedTutor["name"] in tutors
+                            }
+                            ?.keys
+
+                        coursesByTutor?.forEach { course ->
+                            DropdownMenuItem(
+                                text = { Text(course) },
+                                onClick = {
+                                    selectedCourse = mapOf(
+                                        "name" to course
+                                    )
+                                    expandedCourse = false
+                                    isCourseSelected = true
+                                }
+                            )
+                        }
+
+                    }
+                    else{
+                        val allCourseNames = coursesByUniversity
+                            ?.values
+                            ?.flatten()
+                            ?.map { it.courseName }
+                            ?.distinct()
+
+                        allCourseNames?.forEach { course ->
+                            DropdownMenuItem(
+                                text = { Text(course) },
+                                onClick = {
+                                    selectedCourse = mapOf(
+                                        "name" to course
+                                    )
+                                    expandedCourse = false
+                                    isCourseSelected = true
+                                }
+                            )
+                        }
+                    }
+
                 }
             }
 
@@ -436,17 +584,80 @@ fun FilterBottomSheet(modifier: Modifier, tutoringSessionViewModel: TutoringSess
                     expanded = expandedTutor,
                     onDismissRequest = { expandedTutor = false }
                 ) {
-                    tutorsByCourse!![selectedCourse["name"]]?.forEach { tutor ->
-                        DropdownMenuItem(
-                            text = { Text(tutor) },
-                            onClick = {
-                                selectedTutor = mapOf(
-                                    "name" to tutor
-                                )
-                                expandedTutor = false
+                    if(isUniversitySelected && isCourseSelected){
+                        val tutorsForCourseInUniversity: List<String>? = coursesByUniversity!![selectedUniversity["name"]]
+                            ?.find { it.courseName == selectedCourse["name"] }
+                            ?.let { course ->
+                                tutorsByCourse!![course.courseName]
                             }
-                        )
+
+                        tutorsForCourseInUniversity?.forEach { tutor ->
+                            DropdownMenuItem(
+                                text = { Text(tutor) },
+                                onClick = {
+                                    selectedTutor = mapOf(
+                                        "name" to tutor
+                                    )
+                                    expandedTutor = false
+                                }
+                            )
+                        }
                     }
+
+                    else if(isCourseSelected){
+                        tutorsByCourse!![selectedCourse["name"]]?.forEach { tutor ->
+                            DropdownMenuItem(
+                                text = { Text(tutor) },
+                                onClick = {
+                                    selectedTutor = mapOf(
+                                        "name" to tutor
+                                    )
+                                    expandedTutor = false
+                                }
+                            )
+                        }
+                    }
+
+                    else if(isTutorSelected){
+                        val tutorsInUniversity: Set<String>? = coursesByUniversity!![selectedUniversity["name"]]
+                            ?.mapNotNull { course ->
+                                tutorsByCourse!![course.courseName]
+                            }
+                            ?.flatten()
+                            ?.toSet()
+
+                        tutorsInUniversity?.forEach { tutor ->
+                            DropdownMenuItem(
+                                text = { Text(tutor) },
+                                onClick = {
+                                    selectedTutor = mapOf(
+                                        "name" to tutor
+                                    )
+                                    expandedTutor = false
+                                }
+                            )
+                        }
+                    }
+
+                    else {
+                        val uniqueTutors = tutorsByCourse
+                            ?.values
+                            ?.flatten()
+                            ?.toSet()
+
+                        uniqueTutors?.forEach { tutor ->
+                            DropdownMenuItem(
+                                text = { Text(tutor) },
+                                onClick = {
+                                    selectedTutor = mapOf(
+                                        "name" to tutor
+                                    )
+                                    expandedTutor = false
+                                }
+                            )
+                        }
+                    }
+
                 }
             }
 
