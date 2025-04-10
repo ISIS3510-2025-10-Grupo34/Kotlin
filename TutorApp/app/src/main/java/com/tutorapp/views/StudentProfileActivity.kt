@@ -5,18 +5,25 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Base64
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tutorapp.viewModels.StudentProfileViewModel
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,32 +40,40 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.gson.Gson
+import com.tutorapp.models.GetTutoringSessionsToReviewResponse
+import com.tutorapp.models.LoginTokenDecoded
+import com.tutorapp.models.TutoringSession
+import com.tutorapp.models.TutoringSessionToReview
 import com.tutorapp.ui.theme.Black
 import com.tutorapp.ui.theme.LightGrey
 import com.tutorapp.ui.theme.Primary
 import com.tutorapp.ui.theme.Typography
+import com.tutorapp.viewModels.TutorProfileViewModel
+import com.tutorapp.viewModels.TutoringSessionViewModel
 import java.io.ByteArrayInputStream
 
 
 class StudentProfileActivity : ComponentActivity() {
+    private val studentProfileViewModel: StudentProfileViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val studentId = intent.getStringExtra("STUDENT_ID") ?: return
-
-        setContent {
-            val viewModel: StudentProfileViewModel = viewModel()
-
-            StudentProfileScreen(viewModel, studentId)
+        val studentId = intent.getStringExtra("ID") ?: return
+        studentProfileViewModel.getTutoringSessionsToReview(studentId.toInt()) { success, data ->
+            if (success) {
+                setContent {
+                    if (data != null) {
+                        StudentProfileScreen(studentProfileViewModel, studentId, data)
+                    }
+                }
+            }
         }
     }
 }
 
-
-
-
 @Composable
-fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String) {
+fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, tutoringSessionsToReview: GetTutoringSessionsToReviewResponse) {
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(studentId) {
@@ -76,7 +91,6 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String) 
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-
                 Text(
                     text = "TutorApp",
                     fontSize = 20.sp,
@@ -177,8 +191,117 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String) 
                         }
                     }
                 }
+                Text(
+                    text = "Tutoring sessions pending to review",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.align(Alignment.Start).padding(vertical = 8.dp).fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                    color = Primary,
+                    fontWeight = FontWeight.Bold
+                )
+                ListOfTutorCardsToReview(Modifier, studentId, tutoringSessionsToReview)
             }
 
         }
     }
 }
+
+
+@Composable
+fun ListOfTutorCardsToReview(modifier: Modifier, token: String, tutoringSessionsToReview: GetTutoringSessionsToReviewResponse){
+
+    val scrollState = rememberScrollState()
+
+    Column(modifier = modifier
+        .fillMaxSize()
+        .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(20.dp)){
+        tutoringSessionsToReview.data.forEach {
+                tutoringSession -> TutorCardToReview(modifier = Modifier, tutoringSession = tutoringSession, token = token)
+        }
+    }
+}
+
+
+@Composable
+fun TutorCardToReview(modifier: Modifier, tutoringSession: TutoringSessionToReview, token: String) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White)
+            .padding(16.dp)
+    ) {
+        // Top Section (Row)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier
+            .clickable {
+                val tokenFormatted = LoginTokenDecoded(
+                    id = token.toInt(),
+                    email = "",
+                    role = "student",
+                    exp = 0,
+                    iat = 0
+                )
+                val intent = Intent(context, TutorProfileActivity::class.java).apply {
+                    putExtra("TOKEN_KEY", tokenFormatted)
+                    putExtra("TUTOR_ID", tutoringSession.tutorId)
+                }
+                context.startActivity(intent)
+            }) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE0E0E0)), // Light Gray
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = tutoringSession.tutorName[0].uppercase(),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = tutoringSession.tutorName,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Information Section (Column)
+        Column {
+            Text(
+                text = tutoringSession.courseName,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Date: "+tutoringSession.dateTime,
+                fontSize = 14.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Button
+        Button(
+            onClick = {
+                val intent = Intent(context, WriteReviewActivity::class.java).apply {
+                    putExtra("TUTOR_ID", token.toInt())
+                    putExtra("TUTORING_SESSION_ID", tutoringSession.id)
+                }
+                context.startActivity(intent)
+            },
+            modifier = Modifier.align(Alignment.End),
+            colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
+        ) {
+            Text(text = "Write a review")
+        }
+    }
+    }

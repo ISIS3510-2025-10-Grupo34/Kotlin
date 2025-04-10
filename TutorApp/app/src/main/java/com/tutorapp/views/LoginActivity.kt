@@ -2,7 +2,6 @@ package com.tutorapp.views
 import android.content.Intent
 import com.tutorapp.viewModels.LoginViewModel
 import android.os.Bundle
-import android.os.Message
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -19,8 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import com.google.gson.Gson
 import com.tutorapp.ui.theme.Typography
-import org.json.JSONObject
 
 
 class LoginActivity : ComponentActivity() {
@@ -100,12 +99,18 @@ fun LoginScreen(viewModel: LoginViewModel) {
                     if (success) {
                         Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
 
-
-                        val intent = Intent(context, HomeActivity::class.java).apply {
-                            putExtra("TOKEN_KEY", message)
+                        if (message?.role == "tutor") {
+                            val intent = Intent(context, TutorProfileActivity::class.java).apply {
+                                putExtra("TOKEN_KEY", message)
+                            }
+                            context.startActivity(intent)
+                        } else {
+                            val tokenAsString = Gson().toJson(message)
+                            val intent = Intent(context, ShowTutorsActivity::class.java).apply {
+                                putExtra("TOKEN_KEY", tokenAsString)
+                            }
+                            context.startActivity(intent)
                         }
-                        context.startActivity(intent)
-
 
                     } else {
                         Toast.makeText(context, "Login Failed: $message", Toast.LENGTH_SHORT).show()

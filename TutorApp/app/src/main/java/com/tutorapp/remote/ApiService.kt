@@ -1,12 +1,6 @@
 package com.tutorapp.remote
 
-
-
-import com.tutorapp.models.StudentProfileRequest
-import com.tutorapp.models.StudentProfileResponse
 import com.tutorapp.models.*
-
-
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -26,4 +20,47 @@ interface ApiService {
     @POST("studentprofile/")
     suspend fun studentProfile(@Body request: StudentProfileRequest): Response<StudentProfileResponse>
 
+    @GET("universities/")
+    suspend fun universities(): Response<UniversitiesResponse>
+
+    @GET("majors/")
+    suspend fun majors(): Response<MajorsResponse>
+
+    @GET("tutoring-sessions-with-names/")
+    suspend fun tutoringSessions(): Response<List<TutoringSession>>
+
+    @GET("search-results/")
+    suspend fun getSearchResults(): Response<SearchResultResponse>
+
+    @GET("course-estimate-price/")
+    suspend fun getPriceEstimation(
+        @Query("tutorId") tutorId: Int,
+        @Query("courseUniversityName") courseUniversityName: String
+    ): Response<PriceEstimationResponse>
+
+    @POST("tutoring-sessions/")
+    suspend fun postTutoringSession(@Body request: PostTutoringSessionRequest): Response<PostTutoringSessionResponse>
+  
+    @GET("search-results-filter/")
+    suspend fun getSearchResultsFilter(): Response<SearchResultFilterResponse>
+
+    @POST("increase-filter-count/")
+    suspend fun increaseFilterCount(@Body request: PostFilterCounterIncreaseRequest): Response<PostFilterCounterIncreaseResponse>
+
+    @GET("tutorprofile/")
+    suspend fun getTutorProfile(@Query("tutorId") tutorId: Int): Response<GetTutorProfileResponse>
+
+    @POST("time-to-book/")
+    suspend fun postTimeToBook(@Body request: PostTimeToBookRequest): Response<PostTimeToBookResponse>
+  
+    @POST("tutor-profile-load-time/")
+    suspend fun postTutorProfileLoadTime(@Body request: PostTutorProfileLoadTimeRequest): Response<PostTutorProfileLoadTimeResponse>
+
+    @GET("tutoring-sessions-to-review/")
+    suspend fun getTutoringSessionsToReview(
+        @Query("studentId") studentId: Int
+    ): Response<GetTutoringSessionsToReviewResponse>
+
+    @POST("submit-review/")
+    suspend fun postReview(@Body request: PostReviewRequest): Response<PostReviewResponse>
 }

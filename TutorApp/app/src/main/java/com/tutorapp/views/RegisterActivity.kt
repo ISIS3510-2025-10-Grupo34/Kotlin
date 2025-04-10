@@ -18,6 +18,7 @@ import com.tutorapp.ui.theme.Typography
 import androidx.compose.foundation.Image
 import android.net.Uri
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.ArrowDropDown
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -57,9 +58,7 @@ class RegisterActivity : ComponentActivity() {
 @Composable
 fun RegisterScreen(viewModel: RegisterViewModel) {
     var currentScreen by rememberSaveable { mutableStateOf("roleSelection") }
-    var isStudent by rememberSaveable { mutableStateOf(false) }
-    var isTutor by rememberSaveable { mutableStateOf(false) }
-    var isAdmin by rememberSaveable { mutableStateOf(false) }
+    var role by rememberSaveable { mutableStateOf("") }
     var name by rememberSaveable { mutableStateOf("") }
     var university by rememberSaveable { mutableStateOf("") }
     var major by rememberSaveable { mutableStateOf("") }
@@ -73,15 +72,13 @@ fun RegisterScreen(viewModel: RegisterViewModel) {
 
 
     when (currentScreen) {
-        "roleSelection" -> RoleSelectionScreen { student, tutor, admin ->
-            isStudent = student
-            isTutor = tutor
-            isAdmin = admin
+        "roleSelection" -> RoleSelectionScreen { roleselected ->
+            role = roleselected
             currentScreen = "registerDetails"
         }
         "registerDetails" -> {
-            if (isStudent) {
-                StudentRegisterScreen(name, university, major, email, password) { n, u, m, e, p ->
+            if (role == "student") {
+                StudentRegisterScreen(name, university, major, email, password,viewModel) { n, u, m, e, p ->
                     name = n
                     university = u
                     major = m
@@ -89,8 +86,8 @@ fun RegisterScreen(viewModel: RegisterViewModel) {
                     password = p
                     currentScreen = "learningStyles"
                 }
-            } else if (isTutor) {
-                TutorRegisterScreen(name, university, expertise, email, password, phoneNumber) { n, u, exp, e, p, ph ->
+            } else if (role=="tutor") {
+                TutorRegisterScreen(name, university, expertise, email, password, phoneNumber,viewModel) { n, u, exp, e, p, ph ->
                     name = n
                     university = u
                     expertise = exp
@@ -111,7 +108,7 @@ fun RegisterScreen(viewModel: RegisterViewModel) {
         }
         "uploadID" -> UploadIDScreen(
             name, email, password, phoneNumber, profilePictureUri, university, major, expertise,
-            isAdmin, isStudent, isTutor, learningStyles,
+           role, learningStyles,
 
             onRegisterFail = { errorMessage -> println("Error: $errorMessage") },
             viewModel
@@ -120,7 +117,7 @@ fun RegisterScreen(viewModel: RegisterViewModel) {
 }
 
 @Composable
-fun RoleSelectionScreen(onRoleSelected: (Boolean, Boolean, Boolean) -> Unit) {
+fun RoleSelectionScreen(onRoleSelected: (String) -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -129,20 +126,32 @@ fun RoleSelectionScreen(onRoleSelected: (Boolean, Boolean, Boolean) -> Unit) {
         Spacer(modifier = Modifier.height(80.dp))
         Text("Create Account", style = Typography.titleLarge)
         Text("In order to continue we must know if you are a tutor or a student", style = Typography.bodyLarge, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
-        Button(onClick = { onRoleSelected(false, true, false) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)), shape = RoundedCornerShape(50), modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp)) { Text("Tutor", color = Color.White) }
-        Button(onClick = { onRoleSelected(true, false, false) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)), shape = RoundedCornerShape(50), modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp)) { Text("Student", color = Color.White) }
+        Button(onClick = { onRoleSelected("tutor") }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)), shape = RoundedCornerShape(50), modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp)) { Text("Tutor", color = Color.White) }
+        Button(onClick = { onRoleSelected("student") }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)), shape = RoundedCornerShape(50), modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp)) { Text("Student", color = Color.White) }
     }
 }
 
 @Composable
-fun StudentRegisterScreen(name: String, university: String, major: String, email: String, password: String, onDetailsEntered: (String, String, String, String, String) -> Unit) {
-
+fun StudentRegisterScreen(name: String, university: String, major: String, email: String, password: String, viewModel: RegisterViewModel, onDetailsEntered: (String, String, String, String, String) -> Unit) {
+    LaunchedEffect(Unit) {
+        viewModel.universities()
+        viewModel.majors()
+    }
     var nameState by rememberSaveable { mutableStateOf(name) }
     var universityState by rememberSaveable { mutableStateOf(university) }
     var majorState by rememberSaveable { mutableStateOf(major) }
     var emailState by rememberSaveable { mutableStateOf(email) }
     var passwordState by rememberSaveable { mutableStateOf(password) }
     val fieldModifier = Modifier.fillMaxWidth(0.9f)
+    var expanded by remember { mutableStateOf(false) }
+    var expanded2 by remember { mutableStateOf(false) }
+
+
+    val universities by viewModel.universities.collectAsState()
+    val majors by viewModel.majors.collectAsState()
+
+
+
 
 
     Column(
@@ -179,23 +188,67 @@ fun StudentRegisterScreen(name: String, university: String, major: String, email
             minLines = 1
         )
 
-        OutlinedTextField(
-            value = universityState,
-            onValueChange = { universityState = it },
-            label = { Text("University") },
-            modifier = fieldModifier,
-            singleLine = true,
-            minLines = 1
-        )
+        Box {
+            OutlinedTextField(
+                value = majorState,
+                onValueChange = {},
+                label = { Text("Major") },
+                modifier = fieldModifier,
+                readOnly = true, // Hace que no sea editable manualmente
+                trailingIcon = {
+                    IconButton(onClick = { expanded = !expanded }) {
+                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+                    }
+                }
+            )
 
-        OutlinedTextField(
-            value = majorState,
-            onValueChange = { majorState = it },
-            label = { Text("Major") },
-            modifier = fieldModifier,
-            singleLine = true,
-            minLines = 1
-        )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                majors.forEach { major ->
+                    DropdownMenuItem(
+                        text = { Text(major) },
+                        onClick = {
+                            majorState = major
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        Box {
+            OutlinedTextField(
+                value = universityState,
+                onValueChange = {},
+                label = { Text("University") },
+                modifier = fieldModifier,
+                readOnly = true, // Hace que no sea editable manualmente
+                trailingIcon = {
+                    IconButton(onClick = { expanded2 = !expanded2 }) {
+                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+                    }
+                }
+            )
+
+            DropdownMenu(
+                expanded = expanded2,
+                onDismissRequest = { expanded2 = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                universities.forEach { university ->
+                    DropdownMenuItem(
+                        text = { Text(university) },
+                        onClick = {
+                            universityState = university
+                            expanded2 = false
+                        }
+                    )
+                }
+            }
+        }
 
         OutlinedTextField(
             value = emailState,
@@ -233,7 +286,7 @@ fun StudentRegisterScreen(name: String, university: String, major: String, email
 }
 
 @Composable
-fun TutorRegisterScreen(name: String, university: String, expertise: String, email: String, password: String, phoneNumber: String, onDetailsEntered: (String, String, String, String, String, String) -> Unit) {
+fun TutorRegisterScreen(name: String, university: String, expertise: String, email: String, password: String, phoneNumber: String, viewModel: RegisterViewModel, onDetailsEntered: (String, String, String, String, String, String) -> Unit) {
     val fieldModifier = Modifier.fillMaxWidth(0.9f)
     var nameState by rememberSaveable { mutableStateOf(name) }
     var universityState by rememberSaveable { mutableStateOf(university) }
@@ -242,25 +295,117 @@ fun TutorRegisterScreen(name: String, university: String, expertise: String, ema
     var passwordState by rememberSaveable { mutableStateOf(password) }
     var phoneNumberState by rememberSaveable { mutableStateOf(phoneNumber) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("TutorApp", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Start))
-        Spacer(modifier = Modifier.height(60.dp))
-        Text("Tutor", style = Typography.titleLarge)
-        Text("We would like to know more about you", style = Typography.bodyLarge, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
-        OutlinedTextField(value = nameState, onValueChange = { nameState = it }, label = { Text("First and last name") },
-            modifier = fieldModifier)
-        OutlinedTextField(value = universityState, onValueChange = { universityState = it }, label = { Text("University") },
-            modifier = fieldModifier)
-        OutlinedTextField(value = expertiseState, onValueChange = { expertiseState = it }, label = { Text("Area of expertise") },
-            modifier = fieldModifier)
-        OutlinedTextField(value = emailState, onValueChange = { emailState = it }, label = { Text("Email") },
-            modifier = fieldModifier)
-        OutlinedTextField(value = passwordState, onValueChange = { passwordState = it }, label = { Text("Password") },
-            modifier = fieldModifier)
-        OutlinedTextField(value = phoneNumberState, onValueChange = { phoneNumberState = it }, label = { Text("Phone number") },
-            modifier = fieldModifier)
-        Button(onClick = { onDetailsEntered(nameState, universityState, expertiseState, emailState, passwordState, phoneNumberState) }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)), shape = RoundedCornerShape(50), modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp)) { Text("Continue", color = Color.White) }
+    var expanded by remember { mutableStateOf(false) }
+
+
+    val universities by viewModel.universities.collectAsState()
+    LaunchedEffect(Unit) {
+        viewModel.universities()
     }
+
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            "TutorApp",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.Start)
+        )
+
+        Spacer(modifier = Modifier.height(60.dp))
+
+        Text("Tutor", style = Typography.titleLarge)
+        Text(
+            "We would like to know more about you",
+            style = Typography.bodyLarge,
+            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+        )
+
+        OutlinedTextField(
+            value = nameState,
+            onValueChange = { nameState = it },
+            label = { Text("First and last name") },
+            modifier = fieldModifier
+        )
+
+        // Dropdown para seleccionar Universidad
+        Box {
+            OutlinedTextField(
+                value = universityState,
+                onValueChange = {},
+                label = { Text("University") },
+                modifier = fieldModifier,
+                readOnly = true, // Hace que no sea editable manualmente
+                trailingIcon = {
+                    IconButton(onClick = { expanded = !expanded }) {
+                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+                    }
+                }
+            )
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                universities.forEach { university ->
+                    DropdownMenuItem(
+                        text = { Text(university) },
+                        onClick = {
+                            universityState = university
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = expertiseState,
+            onValueChange = { expertiseState = it },
+            label = { Text("Area of expertise") },
+            modifier = fieldModifier
+        )
+
+        OutlinedTextField(
+            value = emailState,
+            onValueChange = { emailState = it },
+            label = { Text("Email") },
+            modifier = fieldModifier
+        )
+
+        OutlinedTextField(
+            value = passwordState,
+            onValueChange = { passwordState = it },
+            label = { Text("Password") },
+            modifier = fieldModifier
+        )
+
+        OutlinedTextField(
+            value = phoneNumberState,
+            onValueChange = { phoneNumberState = it },
+            label = { Text("Phone number") },
+            modifier = fieldModifier
+        )
+
+        Button(
+            onClick = {
+                onDetailsEntered(
+                    nameState, universityState, expertiseState,
+                    emailState, passwordState, phoneNumberState
+                )
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)),
+            shape = RoundedCornerShape(50),
+            modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp)
+        ) {
+            Text("Continue", color = Color.White)
+        }
+    }
+
 }
 @Composable
 fun LearningStylesScreen(selectedStyles: List<String>, onContinue: (List<String>) -> Unit) {
@@ -401,9 +546,7 @@ fun UploadIDScreen(
     university: String,
     major: String?,
     expertise: String?,
-    isAdmin: Boolean,
-    isStudent: Boolean,
-    isTutor: Boolean,
+    role:String,
     learningStyles: List<String>?,
     onRegisterFail: (String) -> Unit,
     viewModel: RegisterViewModel
@@ -491,9 +634,6 @@ fun UploadIDScreen(
 
 
             } ?: Text("Tap to upload picture", color = Color.DarkGray)
-
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
@@ -508,9 +648,7 @@ fun UploadIDScreen(
                         university = university,
                         major = major,
                         expertise = expertise,
-                        isAdmin = isAdmin,
-                        isStudent = isStudent,
-                        isTutor = isTutor,
+                        role = role,
                         learningStyles = learningStyles,
                         idPictureUri = idPictureUri,
                         context = context
@@ -534,6 +672,10 @@ fun UploadIDScreen(
         ) {
             Text("Create my account", color = Color.White)
         }
+
+        }
+
+
     }
 
 
