@@ -6,6 +6,8 @@ import com.tutorapp.models.StudentProfileRequest
 import com.tutorapp.remote.RetrofitClient
 import kotlinx.coroutines.launch
 import android.util.Base64
+import com.tutorapp.models.GetTutorProfileResponse
+import com.tutorapp.models.GetTutoringSessionsToReviewResponse
 import com.tutorapp.models.StudentProfileResponse
 import com.tutorapp.models.dataSP
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +33,21 @@ class StudentProfileViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 println(e.message)
+            }
+        }
+    }
+
+    fun getTutoringSessionsToReview(studentId: Int, onResult: (Boolean, GetTutoringSessionsToReviewResponse?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.instance.getTutoringSessionsToReview(studentId)
+                if (response.isSuccessful) {
+                    onResult(true, response.body())
+                } else {
+                    onResult(false, null)
+                }
+            } catch (e: Exception) {
+                onResult(false, null)
             }
         }
     }
