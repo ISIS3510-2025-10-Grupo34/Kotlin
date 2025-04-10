@@ -158,7 +158,7 @@ fun NearestUniversityFinder(modifier: Modifier, context: Context) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Connect with students",
+                text = "Connect with the students!",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1A1A3F),

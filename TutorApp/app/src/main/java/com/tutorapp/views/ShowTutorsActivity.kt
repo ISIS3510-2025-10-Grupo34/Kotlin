@@ -179,7 +179,7 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
 
                     val intent = Intent(
                         context,
-                        ConnectWithStudentsActivity::class.java
+                        if(role == "tutor")ConnectWithStudentsActivity::class.java else ConnectWithStudentsActivity::class.java
                     ).apply {
                         putExtra("ID", id)
                     }
