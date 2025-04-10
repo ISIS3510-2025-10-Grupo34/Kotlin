@@ -92,11 +92,6 @@ class ShowTutorsActivity: ComponentActivity(){
                 }
                 }?.toMap()
 
-
-
-                Log.i("universities", universities.toString() )
-                Log.i("courses", coursesByUniversity.toString())
-                Log.i("tutors", tutorsByCourse.toString())
                 setContent{
                     TutorAppTheme {
                         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->

@@ -1,7 +1,10 @@
 package com.tutorapp.views
 
+import android.content.Intent
 import com.tutorapp.viewModels.LoginViewModel
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -26,18 +29,22 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tutorapp.viewModels.WriteReviewViewModel
 
 class WriteReviewActivity : ComponentActivity() {
-    private val loginViewModel: LoginViewModel by viewModels()
+    private val viewModel: WriteReviewViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val studentId = intent.getIntExtra("TUTOR_ID", -1)
+        val tutoringSessionId = intent.getIntExtra("TUTORING_SESSION_ID", -1)
         setContent {
-            WriteReviewScreen(loginViewModel)
+            WriteReviewScreen(viewModel, studentId, tutoringSessionId)
         }
     }
 }
@@ -92,10 +99,10 @@ fun Header2(modifier: Modifier){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WriteReviewScreen(viewModel: LoginViewModel) {
+fun WriteReviewScreen(viewModel: WriteReviewViewModel, studentId: Int, tutoringSessionId: Int) {
     var rating by remember { mutableStateOf(0) }
-    var title by remember { mutableStateOf(TextFieldValue()) }
     var review by remember { mutableStateOf(TextFieldValue()) }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -108,23 +115,6 @@ fun WriteReviewScreen(viewModel: LoginViewModel) {
         Header2(modifier = Modifier.height(IntrinsicSize.Min))
 
         Text("Write a review", fontSize = 24.sp, color = Color(0xFF1A2340))
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF1A2340)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("A", fontSize = 32.sp, color = Color.White)
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text("Alejandro Hernandez", fontSize = 18.sp, color = Color.Black)
-        Text("Mobile Development, Business Intelligence", fontSize = 14.sp, color = Color.Gray)
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -141,61 +131,30 @@ fun WriteReviewScreen(viewModel: LoginViewModel) {
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
-            label = { Text("Title (Optional)") },
-            modifier = Modifier.fillMaxWidth()
-        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = review,
             onValueChange = { review = it },
-            label = { Text("Review (Optional)") },
+            label = { Text("Review") },
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(onClick = { /* Submit logic */ }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))) {
+        Button(onClick = {
+            viewModel.postReview(tutoringSessionId, studentId, rating, review.text) { success, message ->
+                if (success) {
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                }
+            }
+            val intent = Intent(context, StudentProfileActivity::class.java).apply {
+                putExtra("ID", studentId.toString())
+            }
+            context.startActivity(intent)
+        }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))) {
             Text("Submit", color = Color.White)
         }
     }
-}
-
-@Composable
-fun TutorReviewItem2() {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF1A2546)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = "A", color = Color.White, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Column {
-            Row {
-                repeat(4) {
-                    Icon(imageVector = Icons.Default.Favorite, contentDescription = "Star", tint = Color(0xFF1A2546))
-                }
-                Icon(imageVector = Icons.Default.FavoriteBorder, contentDescription = "Star", tint = Color(0xFF1A2546))
-            }
-            Text(text = "Supporting line text lorem ipsum dolor sit amet, consectetur.")
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewWriteReviewScreen(viewModel: LoginViewModel = viewModel()) {
-    WriteReviewScreen(viewModel)
 }
