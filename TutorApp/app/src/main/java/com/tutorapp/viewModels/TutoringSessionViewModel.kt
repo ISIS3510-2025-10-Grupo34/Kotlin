@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tutorapp.models.PostFilterCounterIncreaseRequest
+import com.tutorapp.models.PostTimeToBookRequest
 import com.tutorapp.models.SearchResultFilterResponse
 import com.tutorapp.models.TutoringSession
 import com.tutorapp.remote.RetrofitClient
@@ -145,4 +146,17 @@ class TutoringSessionViewModel : ViewModel() {
         }
     }
 
+    fun postTimeToBook(timeToBook: Float) {
+        viewModelScope.launch {
+            try {
+                val body = PostTimeToBookRequest(
+                    timeToBook = timeToBook
+                )
+                val response = RetrofitClient.instance.postTimeToBook(body)
+                Log.i("analytics", response.body()?.data ?: "")
+            } catch (e: Exception) {
+                Log.i("error", e.message ?: "unknown error")
+            }
+        }
+    }
 }

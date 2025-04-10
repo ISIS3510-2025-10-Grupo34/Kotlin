@@ -69,6 +69,7 @@ import com.tutorapp.models.TutorsResponse
 import com.tutorapp.viewModels.TutoringSessionViewModel
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import android.content.Context
 
 class ShowTutorsActivity: ComponentActivity(){
     private val tutoringSessionViewModel: TutoringSessionViewModel by viewModels()
@@ -95,6 +96,12 @@ class ShowTutorsActivity: ComponentActivity(){
                 }
                 }?.toMap()
 
+                Log.i("universities", universities.toString() )
+                Log.i("courses", coursesByUniversity.toString())
+                Log.i("tutors", tutorsByCourse.toString())
+                val timeToBookStartTime = System.currentTimeMillis()
+                val prefs = getSharedPreferences("timeToBookPrefs", MODE_PRIVATE)
+                prefs.edit().putLong("timeToBookStart", timeToBookStartTime).apply()
                 setContent{
                     TutorAppTheme {
                         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -237,14 +244,14 @@ fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessi
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)){
         sessions.forEach {
-            tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token)
+            tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, tutoringSessionViewModel = tutoringSessionViewModel)
         }
     }
 }
 
 
 @Composable
-fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: String) {
+fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: String, tutoringSessionViewModel: TutoringSessionViewModel) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
@@ -315,9 +322,19 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: Strin
 
         // Button
         Button(
-            onClick = { val url = "https://wa.me/573502318015" // Asegúrate de usar el formato internacional sin signos
+            onClick = {
+                val prefs = context.getSharedPreferences("timeToBookPrefs", Context.MODE_PRIVATE)
+                val startTime = prefs.getLong("timeToBookStart", 0L)
+                if (startTime != 0L) {
+                    val timeToBook = System.currentTimeMillis() - startTime
+                    tutoringSessionViewModel.postTimeToBook(timeToBook.toFloat())
+
+                    prefs.edit().remove("timeToBookStart").apply()
+                }
+                val url = "https://wa.me/573502318015"
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                context.startActivity(intent) },
+                context.startActivity(intent)
+            },
             modifier = Modifier.align(Alignment.End),
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
