@@ -50,8 +50,11 @@ class TutorProfileActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val currentUserInfo: LoginTokenDecoded? = intent.getParcelableExtra("TOKEN_KEY")
         val tutorId = if (currentUserInfo?.role == "tutor") currentUserInfo.id else intent.getIntExtra("TUTOR_ID", -1)
+        val startTime = System.currentTimeMillis()
         if (currentUserInfo != null) {
             tutorProfileViewModel.getTutorProfile(tutorId) { success, data ->
+                val loadTime = (System.currentTimeMillis() - startTime).toFloat()
+                tutorProfileViewModel.postProfileLoadTime(loadTime)
                 if (success) {
                     setContent {
                         if (data != null) {
