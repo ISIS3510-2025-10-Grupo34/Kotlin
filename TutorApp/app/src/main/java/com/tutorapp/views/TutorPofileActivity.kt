@@ -220,14 +220,12 @@ fun TutorProfileScreen(
                         tint = Color.White
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Add a subject", fontSize = 16.sp)
+                    Text(text = "Announce a tutoring session", fontSize = 16.sp)
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Mostrar las reseñas traídas de la API
         tutorProfileInfo.data.reviews.forEach { review ->
             TutorReviewItem(review)
         }

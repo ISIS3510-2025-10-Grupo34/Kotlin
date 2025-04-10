@@ -92,11 +92,6 @@ class ShowTutorsActivity: ComponentActivity(){
                 }
                 }?.toMap()
 
-
-
-                Log.i("universities", universities.toString() )
-                Log.i("courses", coursesByUniversity.toString())
-                Log.i("tutors", tutorsByCourse.toString())
                 setContent{
                     TutorAppTheme {
                         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -127,7 +122,7 @@ fun ShowTutorsScreen(modifier: Modifier, tutoringSessionViewModel: TutoringSessi
         TutorScreenHeader(modifier = Modifier.height(IntrinsicSize.Min),token)
         Spacer(modifier = Modifier.height(20.dp))
         FilterResultsButton(modifier = Modifier, tutoringSessionViewModel, universities, coursesByUniversity, tutorsByCourse)
-        ListOfTutorCards(modifier = modifier, tutoringSessionViewModel)
+        ListOfTutorCards(modifier = modifier, tutoringSessionViewModel, token)
     }
 
 }
