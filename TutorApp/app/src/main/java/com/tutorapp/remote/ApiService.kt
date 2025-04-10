@@ -26,7 +26,6 @@ interface ApiService {
     @GET("majors/")
     suspend fun majors(): Response<MajorsResponse>
 
-
     @GET("tutoring-sessions-with-names/")
     suspend fun tutoringSessions(): Response<List<TutoringSession>>
 
@@ -41,7 +40,6 @@ interface ApiService {
 
     @POST("tutoring-sessions/")
     suspend fun postTutoringSession(@Body request: PostTutoringSessionRequest): Response<PostTutoringSessionResponse>
-
   
     @GET("search-results-filter/")
     suspend fun getSearchResultsFilter(): Response<SearchResultFilterResponse>
@@ -51,5 +49,13 @@ interface ApiService {
 
     @GET("tutorprofile/")
     suspend fun getTutorProfile(@Query("tutorId") tutorId: Int): Response<GetTutorProfileResponse>
-  
+
+    @GET("tutoring-sessions-to-review/")
+    suspend fun getTutoringSessionsToReview(
+        @Query("studentId") studentId: Int
+    ): Response<GetTutoringSessionsToReviewResponse>
+
+    @POST("submit-review/")
+    suspend fun postReview(@Body request: PostReviewRequest): Response<PostReviewResponse>
+
 }
