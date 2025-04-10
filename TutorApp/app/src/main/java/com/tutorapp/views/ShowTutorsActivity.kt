@@ -34,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,13 +41,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
-import com.tutorapp.models.TutorResponse
 import com.tutorapp.ui.theme.TutorAppTheme
-import com.tutorapp.viewModels.ShowTutorsViewModel
 import androidx.activity.ComponentActivity
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,23 +59,21 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.gson.Gson
 import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.models.TutoringSession
-import com.tutorapp.models.TutorsResponse
-import com.tutorapp.viewModels.TutoringSessionViewModel
+import com.tutorapp.viewModels.ShowTutorsViewModel
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import android.content.Context
 import com.google.android.gms.location.LocationServices
-import com.tutorapp.views.ConnectWithStudentsActivity
 
 class ShowTutorsActivity: ComponentActivity(){
-    private val tutoringSessionViewModel: TutoringSessionViewModel by viewModels()
+    private val showTutorsViewModel: ShowTutorsViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
-        tutoringSessionViewModel.getAllSessions {  }
+        showTutorsViewModel.getAllSessions {  }
 
         super.onCreate(savedInstanceState)
         val token = intent.getStringExtra("TOKEN_KEY") ?: ""
 
-        tutoringSessionViewModel.getSearchResults(){sucess, data ->
+        showTutorsViewModel.getSearchResults(){ sucess, data ->
             if(sucess){
                 val universities: List<UniversitySimple> = data?.data?.map { (uniName, uni) ->
                     UniversitySimple(name = uniName, id = uni.id)
@@ -107,7 +99,7 @@ class ShowTutorsActivity: ComponentActivity(){
                 setContent{
                     TutorAppTheme {
                         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                            ShowTutorsScreen(Modifier.padding(innerPadding), tutoringSessionViewModel,token, universities, coursesByUniversity, tutorsByCourse)
+                            ShowTutorsScreen(Modifier.padding(innerPadding), showTutorsViewModel,token, universities, coursesByUniversity, tutorsByCourse)
 
                         }
                     }
@@ -116,7 +108,7 @@ class ShowTutorsActivity: ComponentActivity(){
                 setContent{
                     TutorAppTheme {
                         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                            ShowTutorsScreen(Modifier.padding(innerPadding), tutoringSessionViewModel,token, emptyList(), emptyMap(), emptyMap())
+                            ShowTutorsScreen(Modifier.padding(innerPadding), showTutorsViewModel,token, emptyList(), emptyMap(), emptyMap())
 
                         }
                     }
@@ -128,13 +120,13 @@ class ShowTutorsActivity: ComponentActivity(){
 
 }
 @Composable
-fun ShowTutorsScreen(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel,token: String, universities: List<UniversitySimple>,
+fun ShowTutorsScreen(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel, token: String, universities: List<UniversitySimple>,
                      coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
     Column (modifier = modifier.fillMaxSize(1f)){
         TutorScreenHeader(modifier = Modifier.height(IntrinsicSize.Min),token)
         Spacer(modifier = Modifier.height(20.dp))
-        FilterResultsButton(modifier = Modifier, tutoringSessionViewModel, universities, coursesByUniversity, tutorsByCourse)
-        ListOfTutorCards(modifier = modifier, tutoringSessionViewModel, token)
+        FilterResultsButton(modifier = Modifier, showTutorsViewModel, universities, coursesByUniversity, tutorsByCourse)
+        ListOfTutorCards(modifier = modifier, showTutorsViewModel, token)
     }
 
 }
@@ -231,7 +223,7 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
 
 
 @Composable
-fun FilterResultsButton(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel, universities: List<UniversitySimple>,
+fun FilterResultsButton(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel, universities: List<UniversitySimple>,
                         coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
 
     var showBottomSheet by remember { mutableStateOf(false) }
@@ -248,7 +240,7 @@ fun FilterResultsButton(modifier: Modifier, tutoringSessionViewModel: TutoringSe
     }
 
     if (showBottomSheet){
-        FilterBottomSheet(modifier=modifier, tutoringSessionViewModel,
+        FilterBottomSheet(modifier=modifier, showTutorsViewModel,
             onDismissRequest = { showBottomSheet = false }, universities, coursesByUniversity, tutorsByCourse
         )
 
@@ -258,9 +250,9 @@ fun FilterResultsButton(modifier: Modifier, tutoringSessionViewModel: TutoringSe
 }
 
 @Composable
-fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel, token: String){
+fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel, token: String){
 
-    val sessions = tutoringSessionViewModel.sessions
+    val sessions = showTutorsViewModel.sessions
     val scrollState = rememberScrollState()
 
     Column(modifier = modifier
@@ -269,14 +261,14 @@ fun ListOfTutorCards(modifier: Modifier, tutoringSessionViewModel: TutoringSessi
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)){
         sessions.forEach {
-            tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, tutoringSessionViewModel = tutoringSessionViewModel)
+            tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel)
         }
     }
 }
 
 
 @Composable
-fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: String, tutoringSessionViewModel: TutoringSessionViewModel) {
+fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: String, showTutorsViewModel: ShowTutorsViewModel) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
@@ -352,11 +344,11 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: Strin
                 val startTime = prefs.getLong("timeToBookStart", 0L)
                 if (startTime != 0L) {
                     val timeToBook = System.currentTimeMillis() - startTime
-                    tutoringSessionViewModel.postTimeToBook(timeToBook.toFloat())
+                    showTutorsViewModel.postTimeToBook(timeToBook.toFloat())
 
                     prefs.edit().remove("timeToBookStart").apply()
                 }
-                val url = "https://wa.me/573502318015"
+                val url = "https://wa.me/57"+tutoringSession.tutor_phone_number
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                 context.startActivity(intent)
             },
@@ -372,7 +364,7 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: Strin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FilterBottomSheet(modifier: Modifier, tutoringSessionViewModel: TutoringSessionViewModel,
+fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel,
                       onDismissRequest: () -> Unit, universities: List<UniversitySimple>,
                       coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
 
@@ -716,7 +708,7 @@ fun FilterBottomSheet(modifier: Modifier, tutoringSessionViewModel: TutoringSess
                 onClick =
                 { coroutineScope.launch {
                     try{
-                        tutoringSessionViewModel.onFilterClick(selectedUniversity["name"].toString(), selectedCourse["name"].toString(), selectedTutor["name"].toString())
+                        showTutorsViewModel.onFilterClick(selectedUniversity["name"].toString(), selectedCourse["name"].toString(), selectedTutor["name"].toString())
                     }catch (e:Exception){
                         println(e)
                     }

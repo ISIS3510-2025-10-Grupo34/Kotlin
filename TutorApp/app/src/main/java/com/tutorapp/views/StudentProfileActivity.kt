@@ -5,12 +5,9 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Base64
-import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tutorapp.viewModels.StudentProfileViewModel
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,7 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,17 +36,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.gson.Gson
 import com.tutorapp.models.GetTutoringSessionsToReviewResponse
 import com.tutorapp.models.LoginTokenDecoded
-import com.tutorapp.models.TutoringSession
 import com.tutorapp.models.TutoringSessionToReview
-import com.tutorapp.ui.theme.Black
 import com.tutorapp.ui.theme.LightGrey
 import com.tutorapp.ui.theme.Primary
-import com.tutorapp.ui.theme.Typography
-import com.tutorapp.viewModels.TutorProfileViewModel
-import com.tutorapp.viewModels.TutoringSessionViewModel
 import java.io.ByteArrayInputStream
 
 
