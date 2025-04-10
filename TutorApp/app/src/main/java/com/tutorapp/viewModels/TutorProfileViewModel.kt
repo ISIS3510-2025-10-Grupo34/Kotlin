@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tutorapp.models.GetTutorProfileResponse
+import com.tutorapp.models.PostTutorProfileLoadTimeRequest
 import com.tutorapp.remote.RetrofitClient
 import kotlinx.coroutines.launch
 
@@ -19,6 +20,20 @@ class TutorProfileViewModel: ViewModel()  {
                 }
             } catch (e: Exception) {
                 onResult(false, null)
+            }
+        }
+    }
+
+    fun postProfileLoadTime(loadTime: Float) {
+        viewModelScope.launch {
+            try {
+                val body = PostTutorProfileLoadTimeRequest(
+                    loadTime = loadTime
+                )
+                val response = RetrofitClient.instance.postTutorProfileLoadTime(body)
+                Log.i("analytics", response.body()?.data ?: "")
+            } catch (e: Exception) {
+                Log.i("error", e.message ?: "unknown error")
             }
         }
     }

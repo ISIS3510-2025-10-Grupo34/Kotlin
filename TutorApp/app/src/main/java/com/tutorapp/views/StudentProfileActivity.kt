@@ -72,9 +72,6 @@ class StudentProfileActivity : ComponentActivity() {
     }
 }
 
-
-
-
 @Composable
 fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, tutoringSessionsToReview: GetTutoringSessionsToReviewResponse) {
     var isLoading by remember { mutableStateOf(true) }

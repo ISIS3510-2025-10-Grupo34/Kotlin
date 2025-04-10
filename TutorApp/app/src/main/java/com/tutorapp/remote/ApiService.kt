@@ -50,6 +50,9 @@ interface ApiService {
     @GET("tutorprofile/")
     suspend fun getTutorProfile(@Query("tutorId") tutorId: Int): Response<GetTutorProfileResponse>
 
+    @POST("tutor-profile-load-time/")
+    suspend fun postTutorProfileLoadTime(@Body request: PostTutorProfileLoadTimeRequest): Response<PostTutorProfileLoadTimeResponse>
+
     @GET("tutoring-sessions-to-review/")
     suspend fun getTutoringSessionsToReview(
         @Query("studentId") studentId: Int
@@ -57,5 +60,4 @@ interface ApiService {
 
     @POST("submit-review/")
     suspend fun postReview(@Body request: PostReviewRequest): Response<PostReviewResponse>
-
 }
