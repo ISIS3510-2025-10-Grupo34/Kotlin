@@ -1,10 +1,19 @@
-package com.tutorapp.connectWithStudents
+package com.tutorapp.views
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.ui.Modifier
+import com.tutorapp.ui.theme.TutorAppTheme
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +45,20 @@ import kotlin.math.*
 
 
 
+
+class ConnectWithStudentsActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            TutorAppTheme {
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    ConnectWithStudentsScreen(modifier = Modifier.padding(innerPadding))
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun ConnectWithStudentsScreen(modifier: Modifier) {
@@ -86,7 +109,6 @@ fun NearestUniversityFinder(modifier: Modifier, context: Context) {
     var nearestUniversity by remember { mutableStateOf("Searching...") }
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
-    // Diccionario de universidades con sus coordenadas (latitud, longitud)
     val universities = mapOf(
         "Universidad de Los Andes" to Pair(4.6167997, -74.0999867),
         "Universidad del Rosario" to Pair(4.5883434, -74.1212905),

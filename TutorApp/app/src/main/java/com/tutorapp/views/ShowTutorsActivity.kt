@@ -70,6 +70,8 @@ import com.tutorapp.viewModels.TutoringSessionViewModel
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import android.content.Context
+import com.google.android.gms.location.LocationServices
+import com.tutorapp.views.ConnectWithStudentsActivity
 
 class ShowTutorsActivity: ComponentActivity(){
     private val tutoringSessionViewModel: TutoringSessionViewModel by viewModels()
@@ -140,7 +142,17 @@ fun ShowTutorsScreen(modifier: Modifier, tutoringSessionViewModel: TutoringSessi
 
 @Composable
 fun TutorScreenHeader(modifier: Modifier,token: String) {
+
     val context = LocalContext.current
+
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+
+    RequestLocationPermission {
+        getCurrentLocation(context, fusedLocationClient) { location ->
+            Log.d("Location", "Lat: ${location.first}, Lng: ${location.second}")
+        }
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -160,7 +172,20 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
         ) {
             IconButton(
                 onClick = {
+
+                    val jsonToken = JSONObject(token)
+                    val role = jsonToken.get("role").toString()
+                    val id = jsonToken.get("id").toString()
+
+                    val intent = Intent(
+                        context,
+                        ConnectWithStudentsActivity::class.java
+                    ).apply {
+                        putExtra("ID", id)
                     }
+
+                    context.startActivity(intent)
+                }
                 ,
                 modifier = Modifier
                     .size(35.dp) // Tamaño más visible
@@ -697,9 +722,10 @@ fun FilterBottomSheet(modifier: Modifier, tutoringSessionViewModel: TutoringSess
                     }
                 }
                 },
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+                modifier = Modifier.align(Alignment.CenterHorizontally) ,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
             ) {
-                Text("Filter")
+                Text("Filter", color = Color.White)
             }
         }
         Spacer(modifier = Modifier.height(30.dp))
