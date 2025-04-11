@@ -708,7 +708,7 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 Arrangement.spacedBy(8.dp, alignment = Alignment.CenterHorizontally),
