@@ -121,10 +121,11 @@ fun NearestUniversityFinder(modifier: Modifier, context: Context, notificationCe
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
     val universities = mapOf(
-        "Universidad de Los Andes" to Pair(4.6167997, -74.0999867),
+        "Universidad de Los Andes" to Pair(4.6026819,-74.0675411),
         "Universidad del Rosario" to Pair(4.5883434, -74.1212905),
         "Universidad Nacional" to Pair(4.6363615, -74.0881756),
         "Universidad Javeriana" to Pair(4.6308434, -74.0816096),
+        "University of Chicago" to Pair(41.7919066,-87.6076938)
     )
 
 
@@ -310,13 +311,6 @@ fun sendNotification(context: Context, channelId: String, notificationId: Int, t
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return
         }
         notify(notificationId, notificationBuilder.build())
