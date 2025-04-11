@@ -69,6 +69,7 @@ class TutorProfileActivity : ComponentActivity() {
 
 @Composable
 fun TutorProfileHeader(modifier: Modifier) {
+    val context = LocalContext.current
     Row(modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(
             "TutorApp",
@@ -86,7 +87,12 @@ fun TutorProfileHeader(modifier: Modifier) {
             horizontalArrangement = Arrangement.Absolute.SpaceBetween
         ) {
             IconButton(
-                onClick = {},
+                onClick = {
+                    val intent = Intent(context,
+                        ConnectWithStudentsActivity::class.java
+                    )
+                    context.startActivity(intent)
+                },
                 modifier = Modifier
                     .size(25.dp)
                     .clip(CircleShape)

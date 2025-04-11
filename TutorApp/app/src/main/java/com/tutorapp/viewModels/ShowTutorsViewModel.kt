@@ -1,69 +1,162 @@
 package com.tutorapp.viewModels
 
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tutorapp.models.PostFilterCounterIncreaseRequest
 import com.tutorapp.models.PostTimeToBookRequest
-import com.tutorapp.models.TutorsResponse
-import com.tutorapp.showTutors.domain.ShowTutorsUseCase
-import kotlinx.coroutines.launch
+import com.tutorapp.models.SearchResultFilterResponse
+import com.tutorapp.models.TutoringSession
 import com.tutorapp.remote.RetrofitClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-class ShowTutorsViewModel: ViewModel() {
+class ShowTutorsViewModel : ViewModel() {
 
-    val showTutorsUseCase = ShowTutorsUseCase()
+    var sessions by mutableStateOf<List<TutoringSession>>(emptyList())
+        private set
 
-    private val _tutors = MutableLiveData<TutorsResponse>()
-    val tutors: LiveData<TutorsResponse> = _tutors
-
-    fun onStart(){
+    fun getAllSessions(onComplete: (List<TutoringSession>?) -> Unit) {
         viewModelScope.launch {
             try {
-                val tutorList = showTutorsUseCase()
-                _tutors.value = tutorList
+                val response = RetrofitClient.instance.tutoringSessions()
 
+                if (response.isSuccessful) {
+                    sessions = response.body()?.filter { it.student == null } ?: emptyList()
+                    withContext(Dispatchers.Main) {
+                        onComplete(sessions)
+                    }
+                } else {
+                    println("Error: ${response.code()}")
+                    withContext(Dispatchers.Main) {
+                        onComplete(null)
+                    }
+                }
             } catch (e: Exception) {
-
-                println("Error fetching tutors: ${e.message}")
-
+                println("Exception: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    onComplete(null)
+                }
             }
+        }
+    }
+
+    suspend fun onFilterClick(university:String, course:String, professor:String){
+        val response = RetrofitClient.instance.tutoringSessions()
+        if(university.isNotEmpty()  && professor.isNotEmpty() && course.isNotEmpty()){
+            val filteredList = mutableListOf<TutoringSession>()
+            for (element in response.body() ?: emptyList()){
+                if(element.tutor.contains(professor, ignoreCase = true) && element.course.contains(course, ignoreCase = true) && element.university.contains(university, ignoreCase = true)){
+                    filteredList.add(element)
+                }
+            }
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+            sessions = filteredList
+        }
+        else if(university.isNotEmpty() && course.isNotEmpty()){
+            val filteredList = mutableListOf<TutoringSession>()
+            for (element in response.body() ?: emptyList()){
+                if(element.course.contains(course, ignoreCase = true) && element.university.contains(university, ignoreCase = true)){
+                    filteredList.add(element)
+                }
+            }
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+            sessions = filteredList
+        }
+        else if(university.isNotEmpty() && professor.isNotEmpty()){
+            val filteredList = mutableListOf<TutoringSession>()
+            for (element in response.body() ?: emptyList()){
+                if(element.course.contains(professor, ignoreCase = true) && element.university.contains(university, ignoreCase = true)){
+                    filteredList.add(element)
+                }
+            }
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+            sessions = filteredList
+        }
+        else if(course.isNotEmpty() && professor.isNotEmpty()){
+            val filteredList = mutableListOf<TutoringSession>()
+            for (element in response.body() ?: emptyList()){
+                if(element.course.contains(professor, ignoreCase = true) && element.tutor.contains(professor, ignoreCase = true)){
+                    filteredList.add(element)
+                }
+            }
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+            sessions = filteredList
+        }
+
+        else if(university.isNotEmpty()){
+            val filteredList = mutableListOf<TutoringSession>()
+            for (element in response.body() ?: emptyList()){
+                if(element.university.contains(university, ignoreCase = true)){
+                    filteredList.add(element)
+                }
+            }
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+            sessions = filteredList
+        }
+        else if(professor.isNotEmpty()){
+            val filteredList = mutableListOf<TutoringSession>()
+            for (element in response.body() ?: emptyList()){
+                if(element.tutor.contains(professor, ignoreCase = true)){
+                    filteredList.add(element)
+                }
+            }
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+            sessions = filteredList
+        }
+        else if(course.isNotEmpty()){
+            val filteredList = mutableListOf<TutoringSession>()
+            for (element in response.body() ?: emptyList()){
+                if(element.course.contains(course, ignoreCase = true)){
+                    filteredList.add(element)
+                }
+            }
+            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+            sessions = filteredList
+        }
+
+        else{
+            getAllSessions {  }
         }
 
     }
 
-    suspend fun onFilterClick(university:String, course:String, professor:String){
-        val tutorsResponse = showTutorsUseCase()
-        if(university.isNotEmpty()  && professor.isNotEmpty()){
-            val filteredList = tutorsResponse.tutors.filter { tutor ->
-                tutor.university.contains(university, ignoreCase = true) &&
-                        tutor.name.contains(professor, ignoreCase = true)
-            }
-            val tutorsFiltered = TutorsResponse (filteredList)
-            _tutors.value = tutorsFiltered
-        }
-        /**else if(university.isNotEmpty() && course.isNotEmpty()) {
-        val filteredList = tutorList.filter { tutor ->
-        tutor.university.contains(university, ignoreCase = true) &&
-        tutor.course.contains(course, ignoreCase = true)
-        }
-        _tutors.value = filteredList
-        // Handle the case where one or more parameters are empty
-        // You might want to show an error message or load all tutors
-        // For example:
-        //onStart() // Load all tutors if any parameter is empty
-        }
-        else if(university.isNotEmpty() && professor.isNotEmpty()){
-        val filteredList = tutorList.filter { tutor ->
-        tutor.university.contains(university, ignoreCase = true) &&
-        tutor.name.contains(professor, ignoreCase = true)
-        }
-        _tutors.value = filteredList
-        }*/
-        else{
-            onStart()
-        }
+    fun getSearchResults(onResult: (Boolean, SearchResultFilterResponse?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.instance.getSearchResultsFilter()
 
+                if (response.isSuccessful) {
+                    onResult(true, response.body())
+                } else {
+                    onResult(false, null)
+                }
+            } catch (e: Exception) {
+                onResult(false, null)
+            }
+        }
+    }
+
+    fun postTimeToBook(timeToBook: Float) {
+        viewModelScope.launch {
+            try {
+                val body = PostTimeToBookRequest(
+                    timeToBook = timeToBook
+                )
+                val response = RetrofitClient.instance.postTimeToBook(body)
+                Log.i("analytics", response.body()?.data ?: "")
+            } catch (e: Exception) {
+                Log.i("error", e.message ?: "unknown error")
+            }
+        }
     }
 }

@@ -63,4 +63,12 @@ interface ApiService {
 
     @POST("submit-review/")
     suspend fun postReview(@Body request: PostReviewRequest): Response<PostReviewResponse>
+
+    @POST("send-notification/")
+    suspend fun postNotification(@Body request: Notification):Response<SendNotificationResponse>
+
+    @POST("get-notifications/")
+    suspend fun getNotifications(@Body universityName:GetNotificationsRequest): Response<List<Notification>>
+
+
 }
