@@ -343,6 +343,7 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: Strin
         // Button
         Button(
             onClick = {
+                showTutorsViewModel.bookingTime()
                 val prefs = context.getSharedPreferences("timeToBookPrefs", Context.MODE_PRIVATE)
                 val startTime = prefs.getLong("timeToBookStart", 0L)
                 if (startTime != 0L) {

@@ -70,5 +70,6 @@ interface ApiService {
     @POST("get-notifications/")
     suspend fun getNotifications(@Body universityName:GetNotificationsRequest): Response<List<Notification>>
 
-
+    @GET("booking-time")
+    suspend fun bookingTime()
 }

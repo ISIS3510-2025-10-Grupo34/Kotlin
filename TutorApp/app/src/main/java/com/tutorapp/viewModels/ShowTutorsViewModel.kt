@@ -159,4 +159,10 @@ class ShowTutorsViewModel : ViewModel() {
             }
         }
     }
+
+    fun bookingTime(){
+        viewModelScope.launch {
+                RetrofitClient.instance.bookingTime()
+        }
+    }
 }
