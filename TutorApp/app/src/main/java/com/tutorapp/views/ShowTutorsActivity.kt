@@ -65,6 +65,8 @@ import org.json.JSONObject
 import android.content.Context
 import com.google.android.gms.location.LocationServices
 
+
+
 class ShowTutorsActivity: ComponentActivity(){
     private val showTutorsViewModel: ShowTutorsViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -172,6 +174,7 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
                     val intent = Intent(
                         context,
                         if(role == "tutor")ConnectWithStudentsActivity::class.java else NotificationCenterActivity::class.java
+
                     ).apply {
                         putExtra("ID", id)
                     }

@@ -50,18 +50,26 @@ import com.tutorapp.viewModels.NotificationCenterViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.*
 import java.time.LocalDateTime
+import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import kotlin.math.*
+
 
 
 
 class ConnectWithStudentsActivity : ComponentActivity() {
+
     private val notificationCenterViewModel: NotificationCenterViewModel by viewModels()
     @RequiresApi(Build.VERSION_CODES.O)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             TutorAppTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+
                     ConnectWithStudentsScreen(modifier = Modifier.padding(innerPadding), notificationCenterViewModel)
                 }
             }
@@ -74,6 +82,7 @@ class ConnectWithStudentsActivity : ComponentActivity() {
 fun ConnectWithStudentsScreen(modifier: Modifier, notificationCenterViewModel: NotificationCenterViewModel) {
 
 
+
     val context = LocalContext.current
 
     val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
@@ -83,7 +92,6 @@ fun ConnectWithStudentsScreen(modifier: Modifier, notificationCenterViewModel: N
             Log.d("Location", "Lat: ${location.first}, Lng: ${location.second}")
         }
     }
-
 
     NearestUniversityFinder(modifier=modifier, context = context, notificationCenterViewModel)
 
@@ -117,6 +125,7 @@ fun InputField(value: String, onValueChange: (String) -> Unit, label: String) {
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NearestUniversityFinder(modifier: Modifier, context: Context, notificationCenterViewModel: NotificationCenterViewModel) {
+
     var nearestUniversity by remember { mutableStateOf("Searching...") }
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
@@ -187,7 +196,9 @@ fun NearestUniversityFinder(modifier: Modifier, context: Context, notificationCe
 
             Button(
                 onClick = { if (hasNotificationPermission) {
+
                     sendNotification(context, channelId, notificationId, title, message, place, nearestUniversity, notificationCenterViewModel)
+
                 } else {
                     requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 } },
@@ -297,6 +308,7 @@ fun createNotificationChannel(context: Context, channelId: String) {
 fun sendNotification(context: Context, channelId: String, notificationId: Int, title: String, message: String, place: String, nearestUnivesity:String, notificationCenterViewModel: NotificationCenterViewModel) {
 
     notificationCenterViewModel.postNotification(Notification(title, message, place, university = nearestUnivesity.toString(), date = LocalDateTime.now().toString() ))
+
 
     val notificationBuilder = NotificationCompat.Builder(context, channelId)
         .setSmallIcon(android.R.drawable.ic_dialog_info)
