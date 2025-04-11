@@ -43,6 +43,7 @@
         <activity android:name=".views.ShowTutorsActivity"/>
         <activity android:name=".views.ConnectWithStudentsActivity"/>
         <activity android:name=".views.NotificationCenterActivity"/>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
