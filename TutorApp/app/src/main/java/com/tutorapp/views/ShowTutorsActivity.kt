@@ -139,13 +139,13 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
 
     val context = LocalContext.current
 
-    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    /**val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
 
     RequestLocationPermission {
         getCurrentLocation(context, fusedLocationClient) { location ->
             Log.d("Location", "Lat: ${location.first}, Lng: ${location.second}")
         }
-    }
+    }**/
 
     Row(
         modifier = modifier
@@ -369,24 +369,36 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: Strin
 @Composable
 fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel,
                       onDismissRequest: () -> Unit, universities: List<UniversitySimple>,
-                      coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
+                      coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?) {
 
     val coroutineScope = rememberCoroutineScope()
     var expandedUniversity by remember { mutableStateOf(false) }
-    var selectedUniversity by remember { mutableStateOf(mapOf(
-        "name" to "",
-        "id" to -1,
-    ))}
+    var selectedUniversity by remember {
+        mutableStateOf(
+            mapOf(
+                "name" to "",
+                "id" to -1,
+            )
+        )
+    }
     var expandedCourse by remember { mutableStateOf(false) }
-    var selectedCourse by remember { mutableStateOf(mapOf(
-        "name" to "",
-        "id" to -1,
-    )) }
+    var selectedCourse by remember {
+        mutableStateOf(
+            mapOf(
+                "name" to "",
+                "id" to -1,
+            )
+        )
+    }
 
     var expandedTutor by remember { mutableStateOf(false) }
-    var selectedTutor by remember { mutableStateOf(mapOf(
-        "name" to ""
-    ))}
+    var selectedTutor by remember {
+        mutableStateOf(
+            mapOf(
+                "name" to ""
+            )
+        )
+    }
 
     var isUniversitySelected = selectedUniversity["name"] != ""
     var isCourseSelected = selectedCourse["name"] != ""
@@ -414,12 +426,13 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                     expanded = expandedUniversity,
                     onDismissRequest = { expandedUniversity = false }
                 ) {
-                    if(isCourseSelected && isTutorSelected){
+                    if (isCourseSelected && isTutorSelected) {
                         val matchingUniversities = coursesByUniversity
                             ?.filter { (_, courses) ->
                                 courses.any { course ->
                                     course.courseName == selectedCourse["name"] &&
-                                            tutorsByCourse?.get(course.courseName)?.contains(selectedTutor["name"]) == true
+                                            tutorsByCourse?.get(course.courseName)
+                                                ?.contains(selectedTutor["name"]) == true
                                 }
                             }
                             ?.keys
@@ -438,8 +451,7 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                         }
 
 
-                    }
-                    else if(isTutorSelected){
+                    } else if (isTutorSelected) {
                         val universitiesWithTutor = coursesByUniversity
                             ?.filter { (_, courses) ->
                                 courses.any { course ->
@@ -461,8 +473,7 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                                 }
                             )
                         }
-                    }
-                    else if(isCourseSelected){
+                    } else if (isCourseSelected) {
 
                         val universitiesWithCourse = coursesByUniversity
                             ?.filter { (_, courses) ->
@@ -471,19 +482,18 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
 
 
                         universitiesWithCourse?.forEach { university ->
-                                DropdownMenuItem(
-                                    text = { Text(university) },
-                                    onClick = {
-                                        selectedUniversity = mapOf(
-                                            "name" to university
-                                        )
-                                        expandedUniversity = false
-                                        isUniversitySelected = true
-                                    }
-                                )
+                            DropdownMenuItem(
+                                text = { Text(university) },
+                                onClick = {
+                                    selectedUniversity = mapOf(
+                                        "name" to university
+                                    )
+                                    expandedUniversity = false
+                                    isUniversitySelected = true
+                                }
+                            )
                         }
-                    }
-                    else{
+                    } else {
                         universities.forEach { university ->
                             DropdownMenuItem(
                                 text = { Text(university.name) },
@@ -526,7 +536,7 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                     expanded = expandedCourse,
                     onDismissRequest = { expandedCourse = false }
                 ) {
-                    if(isUniversitySelected && isTutorSelected){
+                    if (isUniversitySelected && isTutorSelected) {
                         val matchingCourses = coursesByUniversity!![selectedUniversity["name"]]
                             ?.filter { course ->
                                 tutorsByCourse!![course.courseName]?.contains(selectedTutor["name"]) == true
@@ -545,9 +555,7 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                             )
                         }
 
-                    }
-
-                    else if(isUniversitySelected){
+                    } else if (isUniversitySelected) {
 
                         coursesByUniversity!![selectedUniversity["name"]]?.forEach { course ->
                             DropdownMenuItem(
@@ -561,8 +569,7 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                                 }
                             )
                         }
-                    }
-                    else if(isTutorSelected){
+                    } else if (isTutorSelected) {
                         val coursesByTutor = tutorsByCourse
                             ?.filter { (_, tutors) ->
                                 selectedTutor["name"] in tutors
@@ -582,8 +589,7 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                             )
                         }
 
-                    }
-                    else{
+                    } else {
                         val allCourseNames = coursesByUniversity
                             ?.values
                             ?.flatten()
@@ -628,12 +634,13 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                     expanded = expandedTutor,
                     onDismissRequest = { expandedTutor = false }
                 ) {
-                    if(isUniversitySelected && isCourseSelected){
-                        val tutorsForCourseInUniversity: List<String>? = coursesByUniversity!![selectedUniversity["name"]]
-                            ?.find { it.courseName == selectedCourse["name"] }
-                            ?.let { course ->
-                                tutorsByCourse!![course.courseName]
-                            }
+                    if (isUniversitySelected && isCourseSelected) {
+                        val tutorsForCourseInUniversity: List<String>? =
+                            coursesByUniversity!![selectedUniversity["name"]]
+                                ?.find { it.courseName == selectedCourse["name"] }
+                                ?.let { course ->
+                                    tutorsByCourse!![course.courseName]
+                                }
 
                         tutorsForCourseInUniversity?.forEach { tutor ->
                             DropdownMenuItem(
@@ -646,9 +653,7 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                                 }
                             )
                         }
-                    }
-
-                    else if(isCourseSelected){
+                    } else if (isCourseSelected) {
                         tutorsByCourse!![selectedCourse["name"]]?.forEach { tutor ->
                             DropdownMenuItem(
                                 text = { Text(tutor) },
@@ -660,15 +665,14 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                                 }
                             )
                         }
-                    }
-
-                    else if(isTutorSelected){
-                        val tutorsInUniversity: Set<String>? = coursesByUniversity!![selectedUniversity["name"]]
-                            ?.mapNotNull { course ->
-                                tutorsByCourse!![course.courseName]
-                            }
-                            ?.flatten()
-                            ?.toSet()
+                    } else if (isTutorSelected) {
+                        val tutorsInUniversity: Set<String>? =
+                            coursesByUniversity!![selectedUniversity["name"]]
+                                ?.mapNotNull { course ->
+                                    tutorsByCourse!![course.courseName]
+                                }
+                                ?.flatten()
+                                ?.toSet()
 
                         tutorsInUniversity?.forEach { tutor ->
                             DropdownMenuItem(
@@ -681,9 +685,7 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                                 }
                             )
                         }
-                    }
-
-                    else {
+                    } else {
                         val uniqueTutors = tutorsByCourse
                             ?.values
                             ?.flatten()
@@ -706,25 +708,48 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick =
-                { coroutineScope.launch {
-                    try{
-                        showTutorsViewModel.onFilterClick(selectedUniversity["name"].toString(), selectedCourse["name"].toString(), selectedTutor["name"].toString())
-                    }catch (e:Exception){
-                        println(e)
-                    }
-                }
-                },
-                modifier = Modifier.align(Alignment.CenterHorizontally) ,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                Arrangement.spacedBy(8.dp, alignment = Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Filter", color = Color.White)
+                Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            try {
+                                showTutorsViewModel.onFilterClick(
+                                    selectedUniversity["name"].toString(),
+                                    selectedCourse["name"].toString(),
+                                    selectedTutor["name"].toString()
+                                )
+                            } catch (e: Exception) {
+                                println(e)
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
+                ) {
+                    Text("Filter", color = Color.White)
+                }
+
+                Button(
+                    onClick = {
+                        selectedUniversity = mapOf("name" to "", "id" to -1)
+                        selectedCourse = mapOf("name" to "", "id" to -1)
+                        selectedTutor = mapOf("name" to "")
+                        isUniversitySelected = false
+                        isCourseSelected = false
+                        isTutorSelected = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                ) {
+                    Text("Reset Filters", color = Color.White)
+                }
             }
+            Spacer(modifier = Modifier.height(30.dp))
+
         }
-        Spacer(modifier = Modifier.height(30.dp))
 
     }
-
 }
