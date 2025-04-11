@@ -52,5 +52,22 @@ class StudentProfileViewModel : ViewModel() {
         }
     }
 
+    suspend fun getStudentProfileBody(id: String): StudentProfileResponse? {
+        return try {
+            val response = RetrofitClient.instance.studentProfile(StudentProfileRequest(id))
+            if (response.isSuccessful) {
+                response.body()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            println("Error: ${e.message}")
+            null
+        }
+    }
+
+
+
+
 }
 
