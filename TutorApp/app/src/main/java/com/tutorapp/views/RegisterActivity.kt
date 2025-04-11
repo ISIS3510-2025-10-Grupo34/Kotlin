@@ -39,10 +39,15 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.rememberAsyncImagePainter
 import java.io.ByteArrayOutputStream
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.content.FileProvider
 import com.tutorapp.viewModels.LoginViewModel
 import java.io.File
+
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 
 
 class RegisterActivity : ComponentActivity() {
@@ -149,6 +154,7 @@ fun StudentRegisterScreen(name: String, university: String, major: String, email
 
     val universities by viewModel.universities.collectAsState()
     val majors by viewModel.majors.collectAsState()
+    var passwordVisible by remember { mutableStateOf(false) }
 
 
 
@@ -266,6 +272,16 @@ fun StudentRegisterScreen(name: String, university: String, major: String, email
             modifier = fieldModifier,
             singleLine = true,
             minLines = 1,
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                val image = if (passwordVisible)
+                    Icons.Default.Visibility
+                else Icons.Default.VisibilityOff
+
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide password" else "Show password")
+                }
+            }
 
         )
 
@@ -302,6 +318,7 @@ fun TutorRegisterScreen(name: String, university: String, expertise: String, ema
     LaunchedEffect(Unit) {
         viewModel.universities()
     }
+    var passwordVisible by remember { mutableStateOf(false) }
 
 
     Column(
@@ -381,7 +398,20 @@ fun TutorRegisterScreen(name: String, university: String, expertise: String, ema
             value = passwordState,
             onValueChange = { passwordState = it },
             label = { Text("Password") },
-            modifier = fieldModifier
+            modifier = fieldModifier,
+            singleLine = true,
+            minLines = 1,
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                val image = if (passwordVisible)
+                    Icons.Default.Visibility
+                else Icons.Default.VisibilityOff
+
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide password" else "Show password")
+                }
+            }
+
         )
 
         OutlinedTextField(

@@ -50,9 +50,6 @@ import com.tutorapp.viewModels.NotificationCenterViewModel
 import kotlinx.coroutines.launch
 import kotlin.math.*
 import java.time.LocalDateTime
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import kotlin.math.*
 
 
