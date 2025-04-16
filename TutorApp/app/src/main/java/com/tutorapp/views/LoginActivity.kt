@@ -17,6 +17,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 import com.google.gson.Gson
 import com.tutorapp.ui.theme.Typography
@@ -38,6 +39,13 @@ fun LoginScreen(viewModel: LoginViewModel) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
+
+    BackHandler(enabled = true) {
+        val welcome = Intent(context, WelcomeActivity::class.java).apply {
+
+        }
+        context.startActivity(welcome)
+    }
 
     Column(
         modifier = Modifier

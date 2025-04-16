@@ -101,4 +101,16 @@ class RegisterViewModel : ViewModel() {
         }
 
     }
+    fun email(email: String, onResult: (Boolean, String) -> Unit){
+        viewModelScope.launch {
+            val response = RetrofitClient.instance.email(email)
+
+            if (response.isSuccessful) {
+                onResult(true, "")
+            } else {
+                val errorMessage = response.errorBody()?.string() ?: "Registration failed"
+                onResult(false, errorMessage)
+            }
+        }
+    }
 }

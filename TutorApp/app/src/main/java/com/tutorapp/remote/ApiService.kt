@@ -72,4 +72,13 @@ interface ApiService {
 
     @GET("booking-time")
     suspend fun bookingTime()
+
+    @POST("email-check/")
+    suspend fun email(@Body email: String): Response<ApiResponse>
+
+    @POST("review-percentage/")
+    suspend fun reviewPercentage(@Body id: String): Response<ReviewPercentageResponse>
+
+
+
 }
