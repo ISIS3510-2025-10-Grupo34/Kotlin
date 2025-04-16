@@ -113,7 +113,7 @@ fun RegisterScreen(viewModel: RegisterViewModel) {
         }
         "uploadID" -> UploadIDScreen(
             name, email, password, phoneNumber, profilePictureUri, university, major, expertise,
-           role, learningStyles,
+            role, learningStyles,
 
             onRegisterFail = { errorMessage -> println("Error: $errorMessage") },
             viewModel
@@ -137,28 +137,51 @@ fun RoleSelectionScreen(onRoleSelected: (String) -> Unit) {
 }
 
 @Composable
-fun StudentRegisterScreen(name: String, university: String, major: String, email: String, password: String, viewModel: RegisterViewModel, onDetailsEntered: (String, String, String, String, String) -> Unit) {
+fun StudentRegisterScreen(
+    name: String,
+    university: String,
+    major: String,
+    email: String,
+    password: String,
+    viewModel: RegisterViewModel,
+    onDetailsEntered: (String, String, String, String, String) -> Unit
+) {
     LaunchedEffect(Unit) {
         viewModel.universities()
         viewModel.majors()
     }
+
     var nameState by rememberSaveable { mutableStateOf(name) }
     var universityState by rememberSaveable { mutableStateOf(university) }
     var majorState by rememberSaveable { mutableStateOf(major) }
     var emailState by rememberSaveable { mutableStateOf(email) }
     var passwordState by rememberSaveable { mutableStateOf(password) }
+
+    var nameError by remember { mutableStateOf(false) }
+    var universityError by remember { mutableStateOf(false) }
+    var majorError by remember { mutableStateOf(false) }
+    var emailError by remember { mutableStateOf(false) }
+    var passwordError by remember { mutableStateOf(false) }
+
     val fieldModifier = Modifier.fillMaxWidth(0.9f)
     var expanded by remember { mutableStateOf(false) }
     var expanded2 by remember { mutableStateOf(false) }
-
 
     val universities by viewModel.universities.collectAsState()
     val majors by viewModel.majors.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
 
+    fun validateAndContinue() {
+        nameError = nameState.isBlank()
+        universityError = universityState.isBlank()
+        majorError = majorState.isBlank()
+        emailError = emailState.isBlank()
+        passwordError = passwordState.isBlank()
 
-
-
+        if (!nameError && !universityError && !majorError && !emailError && !passwordError) {
+            onDetailsEntered(nameState, universityState, majorState, emailState, passwordState)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -167,128 +190,122 @@ fun StudentRegisterScreen(name: String, university: String, major: String, email
             .imePadding(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            "TutorApp",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.Start)
-        )
+        Text("TutorApp", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Start))
 
         Spacer(modifier = Modifier.height(80.dp))
 
         Text("Student", style = Typography.titleLarge)
-        Text(
-            "We would like to know more about you",
-            style = Typography.bodyLarge,
-            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
-        )
-
-
+        Text("We would like to know more about you", style = Typography.bodyLarge, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
 
         OutlinedTextField(
             value = nameState,
-            onValueChange = { nameState = it },
+            onValueChange = {
+                nameState = it
+                nameError = false
+            },
             label = { Text("First and last name") },
+            isError = nameError,
             modifier = fieldModifier,
-            singleLine = true,
-            minLines = 1
+            singleLine = true
         )
+        if (nameError) Text("Name is required", color = Color.Red, fontSize = 12.sp)
 
         Box {
             OutlinedTextField(
                 value = majorState,
                 onValueChange = {},
                 label = { Text("Major") },
-                modifier = fieldModifier,
-                readOnly = true, // Hace que no sea editable manualmente
+                isError = majorError,
+                readOnly = true,
                 trailingIcon = {
                     IconButton(onClick = { expanded = !expanded }) {
                         Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
                     }
-                }
+                },
+                modifier = fieldModifier
             )
 
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 majors.forEach { major ->
                     DropdownMenuItem(
                         text = { Text(major) },
                         onClick = {
                             majorState = major
+                            majorError = false
                             expanded = false
                         }
                     )
                 }
             }
         }
+        if (majorError) Text("Major is required", color = Color.Red, fontSize = 12.sp)
 
         Box {
             OutlinedTextField(
                 value = universityState,
                 onValueChange = {},
                 label = { Text("University") },
-                modifier = fieldModifier,
-                readOnly = true, // Hace que no sea editable manualmente
+                isError = universityError,
+                readOnly = true,
                 trailingIcon = {
                     IconButton(onClick = { expanded2 = !expanded2 }) {
                         Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
                     }
-                }
+                },
+                modifier = fieldModifier
             )
 
-            DropdownMenu(
-                expanded = expanded2,
-                onDismissRequest = { expanded2 = false },
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            DropdownMenu(expanded = expanded2, onDismissRequest = { expanded2 = false }) {
                 universities.forEach { university ->
                     DropdownMenuItem(
                         text = { Text(university) },
                         onClick = {
                             universityState = university
+                            universityError = false
                             expanded2 = false
                         }
                     )
                 }
             }
         }
+        if (universityError) Text("University is required", color = Color.Red, fontSize = 12.sp)
 
         OutlinedTextField(
             value = emailState,
-            onValueChange = { emailState = it },
+            onValueChange = {
+                emailState = it
+                emailError = false
+            },
             label = { Text("Email") },
+            isError = emailError,
             modifier = fieldModifier,
-            singleLine = true,
-            minLines = 1
+            singleLine = true
         )
+        if (emailError) Text("Email is required", color = Color.Red, fontSize = 12.sp)
 
         OutlinedTextField(
             value = passwordState,
-            onValueChange = { passwordState = it },
+            onValueChange = {
+                passwordState = it
+                passwordError = false
+            },
             label = { Text("Password") },
-            modifier = fieldModifier,
-            singleLine = true,
-            minLines = 1,
+            isError = passwordError,
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
-                val image = if (passwordVisible)
-                    Icons.Default.Visibility
-                else Icons.Default.VisibilityOff
-
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide password" else "Show password")
+                    Icon(imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff, contentDescription = null)
                 }
-            }
-
+            },
+            modifier = fieldModifier,
+            singleLine = true
         )
+        if (passwordError) Text("Password is required", color = Color.Red, fontSize = 12.sp)
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = { onDetailsEntered(nameState, universityState, majorState, emailState, passwordState) },
+            onClick = { validateAndContinue() },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)),
             shape = RoundedCornerShape(50),
             modifier = Modifier
@@ -298,8 +315,8 @@ fun StudentRegisterScreen(name: String, university: String, major: String, email
             Text("Continue", color = Color.White)
         }
     }
-
 }
+
 
 @Composable
 fun TutorRegisterScreen(name: String, university: String, expertise: String, email: String, password: String, phoneNumber: String, viewModel: RegisterViewModel, onDetailsEntered: (String, String, String, String, String, String) -> Unit) {
@@ -663,7 +680,7 @@ fun UploadIDScreen(
             }
 
 
-            } ?: Text("Tap to upload picture", color = Color.DarkGray)
+        } ?: Text("Tap to upload picture", color = Color.DarkGray)
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
@@ -703,9 +720,9 @@ fun UploadIDScreen(
             Text("Create my account", color = Color.White)
         }
 
-        }
-
-
     }
+
+
+}
 
 
