@@ -27,6 +27,7 @@ import android.os.Build
 import android.provider.MediaStore
 import android.util.Base64
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -48,6 +49,7 @@ import java.io.File
 
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import kotlinx.coroutines.launch
 
 
 class RegisterActivity : ComponentActivity() {
@@ -62,7 +64,7 @@ class RegisterActivity : ComponentActivity() {
 
 @Composable
 fun RegisterScreen(viewModel: RegisterViewModel) {
-    var currentScreen by rememberSaveable { mutableStateOf("roleSelection") }
+
     var role by rememberSaveable { mutableStateOf("") }
     var name by rememberSaveable { mutableStateOf("") }
     var university by rememberSaveable { mutableStateOf("") }
@@ -74,12 +76,26 @@ fun RegisterScreen(viewModel: RegisterViewModel) {
     var learningStyles by rememberSaveable { mutableStateOf(listOf<String>()) }
     var profilePictureUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var idPictureUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    var screenStack by rememberSaveable { mutableStateOf(listOf("roleSelection")) }
+    val currentScreen = screenStack.last()
+    fun goTo(screen: String) {
+        screenStack = screenStack + screen
+    }
+
+    fun goBack() {
+        if (screenStack.size > 1) {
+            screenStack = screenStack.dropLast(1)
+        }
+    }
+    BackHandler(enabled = screenStack.size > 1) {
+        goBack()
+    }
 
 
     when (currentScreen) {
         "roleSelection" -> RoleSelectionScreen { roleselected ->
             role = roleselected
-            currentScreen = "registerDetails"
+            goTo("registerDetails")
         }
         "registerDetails" -> {
             if (role == "student") {
@@ -89,7 +105,7 @@ fun RegisterScreen(viewModel: RegisterViewModel) {
                     major = m
                     email = e
                     password = p
-                    currentScreen = "learningStyles"
+                    goTo("learningStyles")
                 }
             } else if (role=="tutor") {
                 TutorRegisterScreen(name, university, expertise, email, password, phoneNumber,viewModel) { n, u, exp, e, p, ph ->
@@ -99,17 +115,17 @@ fun RegisterScreen(viewModel: RegisterViewModel) {
                     email = e
                     password = p
                     phoneNumber = ph
-                    currentScreen = "uploadProfile"
+                    goTo("uploadProfile")
                 }
             }
         }
         "learningStyles" -> LearningStylesScreen(learningStyles) { selectedStyles ->
             learningStyles = selectedStyles
-            currentScreen = "uploadProfile"
+            goTo("uploadProfile")
         }
         "uploadProfile" -> UploadProfileScreen { uri ->
             profilePictureUri = uri
-            currentScreen = "uploadID"
+            goTo("uploadID")
         }
         "uploadID" -> UploadIDScreen(
             name, email, password, phoneNumber, profilePictureUri, university, major, expertise,
@@ -171,156 +187,193 @@ fun StudentRegisterScreen(
     val majors by viewModel.majors.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
 
-    fun validateAndContinue() {
-        nameError = nameState.isBlank()
-        universityError = universityState.isBlank()
-        majorError = majorState.isBlank()
-        emailError = emailState.isBlank()
-        passwordError = passwordState.isBlank()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
-        if (!nameError && !universityError && !majorError && !emailError && !passwordError) {
-            onDetailsEntered(nameState, universityState, majorState, emailState, passwordState)
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .imePadding(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("TutorApp", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Start))
-
-        Spacer(modifier = Modifier.height(80.dp))
-
-        Text("Student", style = Typography.titleLarge)
-        Text("We would like to know more about you", style = Typography.bodyLarge, modifier = Modifier.padding(top = 8.dp, bottom = 16.dp))
-
-        OutlinedTextField(
-            value = nameState,
-            onValueChange = {
-                nameState = it
-                nameError = false
-            },
-            label = { Text("First and last name") },
-            isError = nameError,
-            modifier = fieldModifier,
-            singleLine = true
-        )
-        if (nameError) Text("Name is required", color = Color.Red, fontSize = 12.sp)
-
-        Box {
-            OutlinedTextField(
-                value = majorState,
-                onValueChange = {},
-                label = { Text("Major") },
-                isError = majorError,
-                readOnly = true,
-                trailingIcon = {
-                    IconButton(onClick = { expanded = !expanded }) {
-                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
-                    }
-                },
-                modifier = fieldModifier
-            )
-
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                majors.forEach { major ->
-                    DropdownMenuItem(
-                        text = { Text(major) },
-                        onClick = {
-                            majorState = major
-                            majorError = false
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-        if (majorError) Text("Major is required", color = Color.Red, fontSize = 12.sp)
-
-        Box {
-            OutlinedTextField(
-                value = universityState,
-                onValueChange = {},
-                label = { Text("University") },
-                isError = universityError,
-                readOnly = true,
-                trailingIcon = {
-                    IconButton(onClick = { expanded2 = !expanded2 }) {
-                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
-                    }
-                },
-                modifier = fieldModifier
-            )
-
-            DropdownMenu(expanded = expanded2, onDismissRequest = { expanded2 = false }) {
-                universities.forEach { university ->
-                    DropdownMenuItem(
-                        text = { Text(university) },
-                        onClick = {
-                            universityState = university
-                            universityError = false
-                            expanded2 = false
-                        }
-                    )
-                }
-            }
-        }
-        if (universityError) Text("University is required", color = Color.Red, fontSize = 12.sp)
-
-        OutlinedTextField(
-            value = emailState,
-            onValueChange = {
-                emailState = it
-                emailError = false
-            },
-            label = { Text("Email") },
-            isError = emailError,
-            modifier = fieldModifier,
-            singleLine = true
-        )
-        if (emailError) Text("Email is required", color = Color.Red, fontSize = 12.sp)
-
-        OutlinedTextField(
-            value = passwordState,
-            onValueChange = {
-                passwordState = it
-                passwordError = false
-            },
-            label = { Text("Password") },
-            isError = passwordError,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff, contentDescription = null)
-                }
-            },
-            modifier = fieldModifier,
-            singleLine = true
-        )
-        if (passwordError) Text("Password is required", color = Color.Red, fontSize = 12.sp)
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = { validateAndContinue() },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)),
-            shape = RoundedCornerShape(50),
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .padding(vertical = 8.dp)
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp)
+                .imePadding(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Continue", color = Color.White)
+            Text("TutorApp", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Start))
+
+            Spacer(modifier = Modifier.height(80.dp))
+
+            Text("Student", style = Typography.titleLarge)
+            Text(
+                "We would like to know more about you",
+                style = Typography.bodyLarge,
+                modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+            )
+
+            OutlinedTextField(
+                value = nameState,
+                onValueChange = {
+                    nameState = it
+                    nameError = false
+                },
+                label = { Text("First and last name") },
+                isError = nameError,
+                modifier = fieldModifier,
+                singleLine = true
+            )
+
+            Box {
+                OutlinedTextField(
+                    value = majorState,
+                    onValueChange = {},
+                    label = { Text("Major") },
+                    isError = majorError,
+                    readOnly = true,
+                    trailingIcon = {
+                        IconButton(onClick = { expanded = !expanded }) {
+                            Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+                        }
+                    },
+                    modifier = fieldModifier
+                )
+
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    majors.forEach { major ->
+                        DropdownMenuItem(
+                            text = { Text(major) },
+                            onClick = {
+                                majorState = major
+                                majorError = false
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Box {
+                OutlinedTextField(
+                    value = universityState,
+                    onValueChange = {},
+                    label = { Text("University") },
+                    isError = universityError,
+                    readOnly = true,
+                    trailingIcon = {
+                        IconButton(onClick = { expanded2 = !expanded2 }) {
+                            Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+                        }
+                    },
+                    modifier = fieldModifier
+                )
+
+                DropdownMenu(expanded = expanded2, onDismissRequest = { expanded2 = false }) {
+                    universities.forEach { university ->
+                        DropdownMenuItem(
+                            text = { Text(university) },
+                            onClick = {
+                                universityState = university
+                                universityError = false
+                                expanded2 = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            OutlinedTextField(
+                value = emailState,
+                onValueChange = {
+                    emailState = it
+                    emailError = false
+                },
+                label = { Text("Email") },
+                isError = emailError,
+                modifier = fieldModifier,
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = passwordState,
+                onValueChange = {
+                    passwordState = it
+                    passwordError = false
+                },
+                label = { Text("Password") },
+                isError = passwordError,
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = null
+                        )
+                    }
+                },
+                modifier = fieldModifier,
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    nameError = nameState.isBlank()
+                    universityError = universityState.isBlank()
+                    majorError = majorState.isBlank()
+                    emailError = emailState.isBlank()
+                    passwordError = passwordState.isBlank()
+
+                    if (nameError || universityError || majorError || emailError || passwordError) {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Please complete all fields")
+                        }
+                    } else {
+                        viewModel.email(emailState) { success, errorMessage ->
+                            if (success) {
+                                onDetailsEntered(
+                                    nameState,
+                                    universityState,
+                                    majorState,
+                                    emailState,
+                                    passwordState
+                                )
+                            } else {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(errorMessage)
+                                }
+                            }
+                        }
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .padding(vertical = 8.dp)
+            ) {
+                Text("Continue", color = Color.White)
+            }
         }
     }
 }
 
 
+
 @Composable
-fun TutorRegisterScreen(name: String, university: String, expertise: String, email: String, password: String, phoneNumber: String, viewModel: RegisterViewModel, onDetailsEntered: (String, String, String, String, String, String) -> Unit) {
+fun TutorRegisterScreen(
+    name: String,
+    university: String,
+    expertise: String,
+    email: String,
+    password: String,
+    phoneNumber: String,
+    viewModel: RegisterViewModel,
+    onDetailsEntered: (String, String, String, String, String, String) -> Unit
+) {
     val fieldModifier = Modifier.fillMaxWidth(0.9f)
+
     var nameState by rememberSaveable { mutableStateOf(name) }
     var universityState by rememberSaveable { mutableStateOf(university) }
     var expertiseState by rememberSaveable { mutableStateOf(expertise) }
@@ -329,131 +382,186 @@ fun TutorRegisterScreen(name: String, university: String, expertise: String, ema
     var phoneNumberState by rememberSaveable { mutableStateOf(phoneNumber) }
 
     var expanded by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
 
-
+    var showErrors by remember { mutableStateOf(false) }
     val universities by viewModel.universities.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
     LaunchedEffect(Unit) {
         viewModel.universities()
     }
-    var passwordVisible by remember { mutableStateOf(false) }
 
+    fun hasEmptyFields(): Boolean {
+        return nameState.isBlank() ||
+                universityState.isBlank() ||
+                expertiseState.isBlank() ||
+                emailState.isBlank() ||
+                passwordState.isBlank() ||
+                phoneNumberState.isBlank()
+    }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            "TutorApp",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.Start)
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "TutorApp",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Start)
+            )
 
-        Spacer(modifier = Modifier.height(60.dp))
+            Spacer(modifier = Modifier.height(60.dp))
 
-        Text("Tutor", style = Typography.titleLarge)
-        Text(
-            "We would like to know more about you",
-            style = Typography.bodyLarge,
-            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
-        )
+            Text("Tutor", style = Typography.titleLarge)
+            Text(
+                "We would like to know more about you",
+                style = Typography.bodyLarge,
+                modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+            )
 
-        OutlinedTextField(
-            value = nameState,
-            onValueChange = { nameState = it },
-            label = { Text("First and last name") },
-            modifier = fieldModifier
-        )
-
-        // Dropdown para seleccionar Universidad
-        Box {
             OutlinedTextField(
-                value = universityState,
-                onValueChange = {},
-                label = { Text("University") },
+                value = nameState,
+                onValueChange = { nameState = it },
+                label = { Text("First and last name") },
                 modifier = fieldModifier,
-                readOnly = true, // Hace que no sea editable manualmente
+                isError = showErrors && nameState.isBlank()
+            )
+
+            // Dropdown para seleccionar Universidad
+            Box {
+                OutlinedTextField(
+                    value = universityState,
+                    onValueChange = {},
+                    label = { Text("University") },
+                    modifier = fieldModifier,
+                    readOnly = true,
+                    isError = showErrors && universityState.isBlank(),
+                    trailingIcon = {
+                        IconButton(onClick = { expanded = !expanded }) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Dropdown"
+                            )
+                        }
+                    }
+                )
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    universities.forEach { university ->
+                        DropdownMenuItem(
+                            text = { Text(university) },
+                            onClick = {
+                                universityState = university
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            OutlinedTextField(
+                value = expertiseState,
+                onValueChange = { expertiseState = it },
+                label = { Text("Area of expertise") },
+                modifier = fieldModifier,
+                isError = showErrors && expertiseState.isBlank()
+            )
+
+            OutlinedTextField(
+                value = emailState,
+                onValueChange = { emailState = it },
+                label = { Text("Email") },
+                modifier = fieldModifier,
+                isError = showErrors && emailState.isBlank()
+            )
+
+            OutlinedTextField(
+                value = passwordState,
+                onValueChange = { passwordState = it },
+                label = { Text("Password") },
+                modifier = fieldModifier,
+                singleLine = true,
+                minLines = 1,
+                isError = showErrors && passwordState.isBlank(),
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    IconButton(onClick = { expanded = !expanded }) {
-                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+                    val image = if (passwordVisible)
+                        Icons.Default.Visibility
+                    else Icons.Default.VisibilityOff
+
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide password" else "Show password")
                     }
                 }
             )
 
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                universities.forEach { university ->
-                    DropdownMenuItem(
-                        text = { Text(university) },
-                        onClick = {
-                            universityState = university
-                            expanded = false
+            OutlinedTextField(
+                value = phoneNumberState,
+                onValueChange = { phoneNumberState = it },
+                label = { Text("Phone number") },
+                modifier = fieldModifier,
+                isError = showErrors && phoneNumberState.isBlank()
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val coroutineScope = rememberCoroutineScope()
+
+            Button(
+                onClick = {
+                    showErrors = true
+                    if (hasEmptyFields()) {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Please complete all fields")
                         }
-                    )
-                }
+                    } else {
+                        viewModel.email(emailState) { success, errorMessage ->
+                            if (success) {
+                                onDetailsEntered(
+                                    nameState,
+                                    universityState,
+                                    expertiseState,
+                                    emailState,
+                                    passwordState,
+                                    phoneNumberState
+                                )
+                            } else {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(errorMessage)
+                                }
+                            }
+                        }
+                    }
+                },
+
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .padding(vertical = 8.dp)
+            ) {
+                Text("Continue", color = Color.White)
             }
         }
 
-        OutlinedTextField(
-            value = expertiseState,
-            onValueChange = { expertiseState = it },
-            label = { Text("Area of expertise") },
-            modifier = fieldModifier
+        // SnackBar para mostrar errores
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
-
-        OutlinedTextField(
-            value = emailState,
-            onValueChange = { emailState = it },
-            label = { Text("Email") },
-            modifier = fieldModifier
-        )
-
-        OutlinedTextField(
-            value = passwordState,
-            onValueChange = { passwordState = it },
-            label = { Text("Password") },
-            modifier = fieldModifier,
-            singleLine = true,
-            minLines = 1,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                val image = if (passwordVisible)
-                    Icons.Default.Visibility
-                else Icons.Default.VisibilityOff
-
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide password" else "Show password")
-                }
-            }
-
-        )
-
-        OutlinedTextField(
-            value = phoneNumberState,
-            onValueChange = { phoneNumberState = it },
-            label = { Text("Phone number") },
-            modifier = fieldModifier
-        )
-
-        Button(
-            onClick = {
-                onDetailsEntered(
-                    nameState, universityState, expertiseState,
-                    emailState, passwordState, phoneNumberState
-                )
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)),
-            shape = RoundedCornerShape(50),
-            modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp)
-        ) {
-            Text("Continue", color = Color.White)
-        }
     }
-
 }
+
+
 @Composable
 fun LearningStylesScreen(selectedStyles: List<String>, onContinue: (List<String>) -> Unit) {
     var learningStyles by rememberSaveable { mutableStateOf(selectedStyles) }
@@ -476,7 +584,7 @@ fun LearningStylesScreen(selectedStyles: List<String>, onContinue: (List<String>
         Spacer(modifier = Modifier.height(40.dp))
 
         Text(
-            text = "Select your preferred learning styles.",
+            text = "Select your preferred learning styles (Optional)",
             style = Typography.bodyLarge,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -598,6 +706,7 @@ fun UploadIDScreen(
     onRegisterFail: (String) -> Unit,
     viewModel: RegisterViewModel
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
     var idPictureUri by remember { mutableStateOf<Uri?>(null) }
     val context = LocalContext.current
 
@@ -682,6 +791,7 @@ fun UploadIDScreen(
 
         } ?: Text("Tap to upload picture", color = Color.DarkGray)
         Spacer(modifier = Modifier.height(16.dp))
+        val coroutineScope = rememberCoroutineScope()
 
         Button(
             onClick = {
@@ -712,6 +822,9 @@ fun UploadIDScreen(
                         }
                     }
                 } else {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("Please upload your university ID picture")
+                    }
                     onRegisterFail("Please upload your university ID picture")
                 }
             },
@@ -719,10 +832,10 @@ fun UploadIDScreen(
         ) {
             Text("Create my account", color = Color.White)
         }
-
+        SnackbarHost(
+            hostState = snackbarHostState,
+        )
     }
 
 
 }
-
-
