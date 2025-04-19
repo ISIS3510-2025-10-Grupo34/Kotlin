@@ -18,6 +18,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import android.os.Bundle
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.tooling.preview.Preview
 import com.tutorapp.ui.theme.TutorAppTheme
 import com.tutorapp.views.*
@@ -32,6 +33,9 @@ class WelcomeActivity : ComponentActivity() {
 
     @Composable
     fun WelcomeScreen() {
+        BackHandler(enabled = true) {
+
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()

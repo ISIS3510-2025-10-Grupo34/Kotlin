@@ -20,6 +20,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 import com.google.gson.Gson
+import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.ui.theme.Typography
 
 
@@ -121,7 +122,9 @@ fun LoginScreen(viewModel: LoginViewModel) {
                         }
 
                     } else {
-                        Toast.makeText(context, "Login Failed: $message", Toast.LENGTH_SHORT).show()
+                        val error = message?.error
+
+                        Toast.makeText(context, "Login Failed: $error", Toast.LENGTH_SHORT).show()
                     }
                 }
             },

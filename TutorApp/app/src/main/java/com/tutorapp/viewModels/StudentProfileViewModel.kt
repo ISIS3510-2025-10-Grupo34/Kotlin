@@ -18,7 +18,7 @@ import org.json.JSONObject
 
 class StudentProfileViewModel : ViewModel() {
 
-    private val _percentage = MutableStateFlow<Float>(0.0F)
+    private val _percentage = MutableStateFlow<Float>(101.0F)
     val percentage: StateFlow<Float> = _percentage
     var studentProfile: dataSP? = null
         private set

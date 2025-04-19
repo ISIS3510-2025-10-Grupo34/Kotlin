@@ -68,6 +68,7 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
     var isLoading by remember { mutableStateOf(true) }
     val percentage by viewModel.percentage.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         viewModel.reviewPercentage(studentId)
     }
@@ -77,7 +78,9 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
         }
     }
     LaunchedEffect(percentage) {
-        if (50 > percentage) {
+        println(percentage)
+        println(percentage<50)
+        if (percentage<50) {
             showDialog = true
         }
     }
@@ -86,6 +89,7 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
     if (isLoading) {
         CircularProgressIndicator()
     } else {
+        println("dd $showDialog")
         if (showDialog) {
             AlertDialog(
                 onDismissRequest = {
@@ -113,12 +117,26 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                Text(
-                    text = "TutorApp",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.Start)
-                )
+
+                Row(){
+                    Text(
+                        text = "TutorApp",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(modifier = Modifier.width(120.dp))
+                    Button(
+                        onClick = {
+                            val intent = Intent(context, WelcomeActivity::class.java).apply {
+                            }
+                            context.startActivity(intent)
+                        },
+
+                        colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
+                    ) {
+                        Text(text = "Log out")
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -222,6 +240,8 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
                     fontWeight = FontWeight.Bold
                 )
                 ListOfTutorCardsToReview(Modifier, studentId, tutoringSessionsToReview)
+
+
             }
 
         }

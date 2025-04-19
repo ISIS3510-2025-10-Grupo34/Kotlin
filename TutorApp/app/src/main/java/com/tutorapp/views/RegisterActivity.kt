@@ -151,6 +151,9 @@ fun RoleSelectionScreen(onRoleSelected: (String) -> Unit) {
         Button(onClick = { onRoleSelected("student") }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)), shape = RoundedCornerShape(50), modifier = Modifier.fillMaxWidth(0.8f).padding(vertical = 8.dp)) { Text("Student", color = Color.White) }
     }
 }
+fun isValidEmail(email: String): Boolean {
+    return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+}
 
 @Composable
 fun StudentRegisterScreen(
@@ -322,12 +325,16 @@ fun StudentRegisterScreen(
                     nameError = nameState.isBlank()
                     universityError = universityState.isBlank()
                     majorError = majorState.isBlank()
-                    emailError = emailState.isBlank()
+                    emailError = emailState.isBlank() || !isValidEmail(emailState)
                     passwordError = passwordState.isBlank()
 
                     if (nameError || universityError || majorError || emailError || passwordError) {
                         coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Please complete all fields")
+                            val errorMsg = when {
+                                !isValidEmail(emailState) -> "Please enter a valid email"
+                                else -> "Please complete all fields"
+                            }
+                            snackbarHostState.showSnackbar(errorMsg)
                         }
                     } else {
                         viewModel.email(emailState) { success, errorMessage ->
@@ -481,7 +488,7 @@ fun TutorRegisterScreen(
                 onValueChange = { emailState = it },
                 label = { Text("Email") },
                 modifier = fieldModifier,
-                isError = showErrors && emailState.isBlank()
+                isError = showErrors && emailState.isBlank() && !isValidEmail(emailState)
             )
 
             OutlinedTextField(
@@ -524,20 +531,27 @@ fun TutorRegisterScreen(
                             snackbarHostState.showSnackbar("Please complete all fields")
                         }
                     } else {
-                        viewModel.email(emailState) { success, errorMessage ->
-                            if (success) {
-                                onDetailsEntered(
-                                    nameState,
-                                    universityState,
-                                    expertiseState,
-                                    emailState,
-                                    passwordState,
-                                    phoneNumberState
-                                )
-                            } else {
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(errorMessage)
+                        if(isValidEmail(emailState)) {
+                            viewModel.email(emailState) { success, errorMessage ->
+                                if (success) {
+                                    onDetailsEntered(
+                                        nameState,
+                                        universityState,
+                                        expertiseState,
+                                        emailState,
+                                        passwordState,
+                                        phoneNumberState
+                                    )
+                                } else {
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(errorMessage)
+                                    }
                                 }
+                            }
+                        }
+                        else{
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Please enter a valid email")
                             }
                         }
                     }
