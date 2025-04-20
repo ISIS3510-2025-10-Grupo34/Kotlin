@@ -36,17 +36,25 @@ import com.google.android.gms.location.LocationServices
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.os.Build
 import android.util.Log
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.tutorapp.models.Notification
 import com.tutorapp.remote.RetrofitClient
 import com.tutorapp.viewModels.NotificationCenterViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.*
 import java.time.LocalDateTime
@@ -74,141 +82,411 @@ class ConnectWithStudentsActivity : ComponentActivity() {
     }
 }
 
+
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ConnectWithStudentsScreen(modifier: Modifier, notificationCenterViewModel: NotificationCenterViewModel) {
-
-
-
+fun ConnectWithStudentsScreen(
+    modifier: Modifier,
+    notificationCenterViewModel: NotificationCenterViewModel
+) {
     val context = LocalContext.current
+    val fusedLocationClient = remember {
+        LocationServices.getFusedLocationProviderClient(context)
+    }
+    var permissionGranted by remember { mutableStateOf<Boolean?>(null) }
+    var permanentlyDenied by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
 
-    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    RequestLocationPermission {
-        getCurrentLocation(context, fusedLocationClient) { location ->
-            Log.d("Location", "Lat: ${location.first}, Lng: ${location.second}")
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val permission = Manifest.permission.ACCESS_FINE_LOCATION
+                val granted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+                permissionGranted = granted
+                permanentlyDenied = !granted && !ActivityCompat.shouldShowRequestPermissionRationale(context as Activity, permission)
+            }
+
+
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
-    NearestUniversityFinder(modifier=modifier, context = context, notificationCenterViewModel)
+
+
+
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        permissionGranted = isGranted
+        if (!isGranted) {
+            permanentlyDenied = isPermissionPermanentlyDenied(context)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val locationPermission = Manifest.permission.ACCESS_FINE_LOCATION
+        val locationGranted = ContextCompat.checkSelfPermission(context, locationPermission) == PackageManager.PERMISSION_GRANTED
+        permissionGranted = locationGranted
+
+        if (!locationGranted) {
+            permissionLauncher.launch(locationPermission)
+        }
+    }
+
+
+    when (permissionGranted) {
+        true -> {
+            getCurrentLocation(context, fusedLocationClient) { location ->
+                Log.d("Location", "Lat: ${location.first}, Lng: ${location.second}")
+            }
+            NearestUniversityFinder(
+                modifier = Modifier,
+                context = context,
+                notificationCenterViewModel = notificationCenterViewModel
+            )
+
+        }
+
+        false -> {
+            Column(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Location access is necessary to find nearest universities.")
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (permanentlyDenied) {
+                    Button(onClick = { showSettingsDialog = true },
+                        colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )) {
+                        Text("Go to settings", color = Color.White)
+                    }
+                } else {
+                    Button(onClick = {
+                        permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                    },
+                        colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )) {
+                        Text("Request permission again", color = Color.White)
+                    }
+                }
+            }
+
+
+            if (showSettingsDialog) {
+                AlertDialog(
+                    onDismissRequest = { showSettingsDialog = false },
+                    title = { Text("Location access is required") },
+                    text = {
+                        Text("Go to settings and manually enable the location permission to continue.")
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showSettingsDialog = false
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            context.startActivity(intent)
+                        }) {
+                            Text("Go to settings")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            showSettingsDialog = false
+                        }) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+        }
+
+        null -> {
+            CircularProgressIndicator(modifier = modifier)
+        }
+    }
+
+
 
 }
 
+
+
 @Composable
-fun InputField(value: String, onValueChange: (String) -> Unit, label: String) {
+fun InputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    isError: Boolean = false // Nuevo parámetro para indicar si hay un error
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
     ) {
-        Text(text = label, fontSize = 12.sp, color = Color.Gray)
+        Text(text = label, fontSize = 12.sp, color = if (isError) Color.Red else Color.Gray) // Color rojo si hay error
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF1A1A3F),
-                unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
+                focusedBorderColor = if (isError) Color.Red else Color(0xFF1A1A3F), // Borde rojo si hay error
+                unfocusedBorderColor = if (isError) Color.Red.copy(alpha = 0.5f) else Color.Gray.copy(alpha = 0.5f), // Borde rojo si hay error
                 focusedContainerColor = Color(0xFFECE6F0),
                 unfocusedContainerColor = Color(0xFFF3EDF8)
             )
         )
+        if (isError) {
+            Text(text = "This field is required", color = Color.Red, fontSize = 10.sp) // Mensaje de error
+        }
     }
 }
 
 
-
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun NearestUniversityFinder(modifier: Modifier, context: Context, notificationCenterViewModel: NotificationCenterViewModel) {
+fun NearestUniversityFinder(
+    modifier: Modifier,
+    context: Context,
+    notificationCenterViewModel: NotificationCenterViewModel
+) {
+    var notificationPermissionGranted by remember { mutableStateOf(checkNotificationPermission(context)) }
+    var notificationPermanentlyDenied by remember { mutableStateOf(false) }
+    var showNotificationSettingsDialog by remember { mutableStateOf(false) }
+    var permissionRequested by remember { mutableStateOf(false) }
+
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        notificationPermissionGranted = isGranted
+        permissionRequested = true
+        if (!isGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val shouldShowRationale = ActivityCompat.shouldShowRequestPermissionRationale(
+                context as Activity,
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+            notificationPermanentlyDenied = !shouldShowRationale
+        } else {
+            notificationPermanentlyDenied = false
+        }
+    }
 
     var nearestUniversity by remember { mutableStateOf("Searching...") }
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
     val universities = mapOf(
-        "Universidad de Los Andes" to Pair(4.6026819,-74.0675411),
+        "Universidad de Los Andes" to Pair(4.6026819, -74.0675411),
         "Universidad del Rosario" to Pair(4.5883434, -74.1212905),
         "Universidad Nacional" to Pair(4.6363615, -74.0881756),
         "Universidad Javeriana" to Pair(4.6308434, -74.0816096),
-        "University of Chicago" to Pair(41.7919066,-87.6076938)
-    )
+        "University of Chicago" to Pair(41.7919066, -87.6076938)
 
+    )
 
     val notificationId = 1
     val channelId = "message_channel"
-
-    var hasNotificationPermission by remember { mutableStateOf(checkNotificationPermission(context)) }
-
-    val requestPermissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            hasNotificationPermission = isGranted
-        }
 
     LaunchedEffect(Unit) {
         getCurrentLocation(context, fusedLocationClient) { userLocation ->
             nearestUniversity = findNearestUniversity(userLocation, universities)
         }
-
         createNotificationChannel(context, channelId)
-    }
 
+        if (!notificationPermissionGranted && !permissionRequested) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     var title by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var place by remember { mutableStateOf("") }
 
 
+    var isTitleEmpty by remember { mutableStateOf(false) }
+    var isMessageEmpty by remember { mutableStateOf(false) }
+    var isPlaceEmpty by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(top=100.dp),
+            .padding(top = 100.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(text = "Nearest University:", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = nearestUniversity, style = MaterialTheme.typography.bodyLarge)
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Connect with the students!",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A3F),
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(4.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            InputField(value = title, onValueChange = { title = it }, label = "Title")
-            InputField(value = message, onValueChange = { message = it }, label = "Message")
-            InputField(value = place, onValueChange = { place = it }, label = "Place")
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = { if (hasNotificationPermission) {
-
-                    sendNotification(context, channelId, notificationId, title, message, place, nearestUniversity, notificationCenterViewModel)
-
-                } else {
-                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                } },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A3F)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.padding(8.dp)
+        if (notificationPermissionGranted) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(if (hasNotificationPermission) "Send" else "Request Permission", color = Color.White)
+                Text(
+                    text = "Connect with the students!",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A1A3F),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                InputField(
+                    value = title,
+                    onValueChange = { title = it; isTitleEmpty = it.trim().isEmpty() },
+                    label = "Title",
+                    isError = isTitleEmpty
+                )
+                InputField(
+                    value = message,
+                    onValueChange = { message = it; isMessageEmpty = it.trim().isEmpty() },
+                    label = "Message",
+                    isError = isMessageEmpty
+                )
+                InputField(
+                    value = place,
+                    onValueChange = { place = it; isPlaceEmpty = it.trim().isEmpty() },
+                    label = "Place",
+                    isError = isPlaceEmpty
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = {
+                        isTitleEmpty = title.trim().isEmpty()
+                        isMessageEmpty = message.trim().isEmpty()
+                        isPlaceEmpty = place.trim().isEmpty()
+
+                        if (notificationPermissionGranted && !isTitleEmpty && !isMessageEmpty && !isPlaceEmpty) {
+                            sendNotification(
+                                context,
+                                channelId,
+                                notificationId,
+                                title,
+                                message,
+                                place,
+                                nearestUniversity,
+                                notificationCenterViewModel
+                            )
+                        } else if (notificationPermissionGranted) {
+                            // Los campos vacíos se resaltarán automáticamente
+                        } else {
+                            if (notificationPermanentlyDenied) {
+                                showNotificationSettingsDialog = true
+                            } else {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A3F)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Text(
+                        if (notificationPermissionGranted) "Send" else "Enable notifications permission",
+                        color = Color.White
+                    )
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    "Notification permission is required to send messages.",
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                if (notificationPermanentlyDenied) {
+                    Button(onClick = { showNotificationSettingsDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A3F), contentColor = Color.White)
+                    ) {
+                        Text("Go to Settings", color = Color.White)
+                    }
+                } else {
+                    Button(onClick = { notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A3F), contentColor = Color.White)
+                    ) {
+                        Text("Request Permission", color = Color.White)
+                    }
+                }
             }
         }
     }
+
+    if (showNotificationSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showNotificationSettingsDialog = false },
+            title = { Text("Push notifications are required") },
+            text = {
+                Text("Go to Settings and manually enable the notification permission to continue.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showNotificationSettingsDialog = false
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                    }
+                    context.startActivity(intent)
+                }) {
+                    Text("Go to settings")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showNotificationSettingsDialog = false
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val currentPermissionGranted = checkNotificationPermission(context)
+                notificationPermissionGranted = currentPermissionGranted
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !currentPermissionGranted && permissionRequested) {
+                    val shouldShowRationale = ActivityCompat.shouldShowRequestPermissionRationale(
+                        context as Activity,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    )
+                    notificationPermanentlyDenied = !shouldShowRationale
+                } else {
+                    notificationPermanentlyDenied = false
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+        onDispose {}
+    }
 }
+
 
 @SuppressLint("MissingPermission")
 fun getCurrentLocation(
@@ -245,33 +523,39 @@ fun calculateDistance(loc1: Pair<Double, Double>, loc2: Pair<Double, Double>): D
     return radius * c
 }
 
+fun isPermissionPermanentlyDenied(context: Context): Boolean {
+    val permission = Manifest.permission.ACCESS_FINE_LOCATION
+    return ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED &&
+            !ActivityCompat.shouldShowRequestPermissionRationale(context as Activity, permission)
+}
 
+@Composable
+fun RequestLocationPermissionLauncher(onPermissionResult: (Boolean) -> Unit): ManagedActivityResultLauncher<String, Boolean> {
+    val context = LocalContext.current
+
+    return rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        onPermissionResult(isGranted)
+    }
+}
 
 
 @Composable
-fun RequestLocationPermission(onGranted: () -> Unit) {
+fun RequestLocationPermission(onResult: (Boolean) -> Unit) {
     val context = LocalContext.current
-    val activity = context as? Activity
-
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            if (isGranted) {
-                onGranted()
-            } else {
-                Toast.makeText(context, "Permission Denied", Toast.LENGTH_SHORT).show()
-            }
-        }
-    )
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        onResult(isGranted)
+    }
 
     LaunchedEffect(Unit) {
-        if (ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        val permission = Manifest.permission.ACCESS_FINE_LOCATION
+        if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+            onResult(true)
         } else {
-            onGranted()
+            permissionLauncher.launch(permission)
         }
     }
 }
