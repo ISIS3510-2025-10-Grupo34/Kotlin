@@ -114,12 +114,12 @@ fun WriteReviewScreen(viewModel: WriteReviewViewModel, studentId: Int, tutoringS
 
         Header2(modifier = Modifier.height(IntrinsicSize.Min))
 
-        Text("Write a review", fontSize = 24.sp, color = Color(0xFF1A2340))
+        Text("Write a review", fontSize = 32.sp, color = Color(0xFF1A2340), fontWeight = FontWeight.Bold)
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("Tap to Rate:", fontSize = 16.sp, color = Color.Black)
-        Row {
+        Row(horizontalArrangement = Arrangement.spacedBy(-16.dp)) {
             for (i in 1..5) {
                 IconButton(onClick = { rating = i }) {
                     Icon(
@@ -130,7 +130,6 @@ fun WriteReviewScreen(viewModel: WriteReviewViewModel, studentId: Int, tutoringS
                 }
             }
         }
-
 
         Spacer(modifier = Modifier.height(8.dp))
 
