@@ -252,7 +252,7 @@ fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMode
     val emptyFilter = showTutorsViewModel.emptyFilter
     val scrollState = rememberScrollState()
     if (emptyFilter){
-        Text("Empty filter", modifier = modifier.fillMaxWidth())
+        Text("No tutoring sessions matched with the filter.", modifier = modifier.fillMaxWidth())
         Column(modifier = modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
