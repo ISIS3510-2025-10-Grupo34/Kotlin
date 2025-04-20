@@ -292,6 +292,7 @@ fun NearestUniversityFinder(
         "Universidad Nacional" to Pair(4.6363615, -74.0881756),
         "Universidad Javeriana" to Pair(4.6308434, -74.0816096),
         "University of Chicago" to Pair(41.7919066, -87.6076938)
+
     )
 
     val notificationId = 1

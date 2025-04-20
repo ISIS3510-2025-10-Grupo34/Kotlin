@@ -8,5 +8,6 @@ data class LoginTokenDecoded(
     val email: String,
     val role: String,
     val exp: Long,
-    val iat: Long
+    val iat: Long,
+    val error: String? = null
 ) : Parcelable

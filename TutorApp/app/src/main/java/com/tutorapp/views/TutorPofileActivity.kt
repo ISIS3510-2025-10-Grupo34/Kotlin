@@ -79,6 +79,18 @@ fun TutorProfileHeader(modifier: Modifier) {
             fontSize = 35.sp,
             fontWeight = FontWeight.Bold,
         )
+
+        Button(
+            onClick = {
+                val intent = Intent(context, WelcomeActivity::class.java).apply {
+                }
+                context.startActivity(intent)
+            },
+
+            colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
+        ) {
+            Text(text = "Log out")
+        }
         Row(
             modifier = Modifier
                 .weight(0.5f)
@@ -237,6 +249,17 @@ fun TutorProfileScreen(
         Spacer(modifier = Modifier.height(16.dp))
         tutorProfileInfo.data.reviews.forEach { review ->
             TutorReviewItem(review)
+        }
+        Button(
+            onClick = {
+                val intent = Intent(context, WelcomeActivity::class.java).apply {
+                }
+                context.startActivity(intent)
+            },
+            modifier = Modifier.align(Alignment.End),
+            colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
+        ) {
+            Text(text = "Log out")
         }
     }
 }

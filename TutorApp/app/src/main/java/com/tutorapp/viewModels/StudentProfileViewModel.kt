@@ -11,10 +11,15 @@ import com.tutorapp.models.GetTutoringSessionsToReviewResponse
 import com.tutorapp.models.StudentProfileResponse
 import com.tutorapp.models.dataSP
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 class StudentProfileViewModel : ViewModel() {
+
+    private val _percentage = MutableStateFlow<Float>(101.0F)
+    val percentage: StateFlow<Float> = _percentage
     var studentProfile: dataSP? = null
         private set
     fun studentProfile(id: String, onComplete: (dataSP?) -> Unit) {
@@ -63,6 +68,15 @@ class StudentProfileViewModel : ViewModel() {
         } catch (e: Exception) {
             println("Error: ${e.message}")
             null
+        }
+    }
+    fun reviewPercentage(id: String) {
+        viewModelScope.launch {
+            val response = RetrofitClient.instance.reviewPercentage(id)
+            println(response.body())
+            println("aaaa")
+            response.body()?.let { _percentage.value = it.percentage }
+
         }
     }
 

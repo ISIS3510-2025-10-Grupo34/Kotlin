@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import android.util.Base64
 import android.util.Log
 import com.google.gson.Gson
+import org.json.JSONObject
 
 class LoginViewModel : ViewModel() {
     fun login(email: String, password: String, onResult: (Boolean, LoginTokenDecoded?) -> Unit) {
@@ -22,12 +23,24 @@ class LoginViewModel : ViewModel() {
                         val tokenFormatted = Gson().fromJson(token, LoginTokenDecoded::class.java)
                         onResult(true, tokenFormatted)
                     } else {
+
                         onResult(false, null)
                     }
                 } else {
-                    onResult(false, null)
+
+                    val jsonString = response.errorBody()?.string()
+
+                    val error = JSONObject(jsonString).getString("error")
+
+                    val errortoken = LoginTokenDecoded(id=0,email="",role="",3,3, error = error)
+
+
+
+
+                    onResult(false, errortoken)
                 }
             } catch (e: Exception) {
+                println(e)
                 onResult(false, null)
             }
         }

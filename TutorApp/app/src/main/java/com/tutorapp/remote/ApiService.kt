@@ -70,5 +70,15 @@ interface ApiService {
     @POST("get-notifications/")
     suspend fun getNotifications(@Body universityName:GetNotificationsRequest): Response<List<Notification>>
 
+    @GET("booking-time")
+    suspend fun bookingTime()
+
+    @POST("email-check/")
+    suspend fun email(@Body email: String): Response<ApiResponse>
+
+    @POST("review-percentage/")
+    suspend fun reviewPercentage(@Body id: String): Response<ReviewPercentageResponse>
+
+
 
 }

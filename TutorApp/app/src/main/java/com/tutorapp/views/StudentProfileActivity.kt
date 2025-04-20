@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.CircularProgressIndicator
@@ -65,28 +66,77 @@ class StudentProfileActivity : ComponentActivity() {
 @Composable
 fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, tutoringSessionsToReview: GetTutoringSessionsToReviewResponse) {
     var isLoading by remember { mutableStateOf(true) }
-
+    val percentage by viewModel.percentage.collectAsState()
+    var showDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        viewModel.reviewPercentage(studentId)
+    }
     LaunchedEffect(studentId) {
         viewModel.studentProfile(studentId) {
             isLoading = false
         }
     }
+    LaunchedEffect(percentage) {
+        println(percentage)
+        println(percentage<50)
+        if (percentage<50) {
+            showDialog = true
+        }
+    }
+
 
     if (isLoading) {
         CircularProgressIndicator()
     } else {
+        println("dd $showDialog")
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    // Evita que se cierre al tocar fuera del diálogo
+                    // No hacemos nada aquí para forzar al usuario a usar el botón
+                },
+                title = {
+                    Text(text = "Help tutorapp improve!")
+                },
+                text = {
+                    Text("We notice you've only reviewed $percentage% of your booked tutorings, " +
+                            "try to review more")
+                },
+                confirmButton = {
+                    Button(onClick = { showDialog = false },
+                        colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )) {
+                        Text("Ok")
+                    }
+                }
+            )
+        }
         viewModel.studentProfile?.let { profile ->
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                Text(
-                    text = "TutorApp",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.Start)
-                )
+
+                Row(){
+                    Text(
+                        text = "TutorApp",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(modifier = Modifier.width(120.dp))
+                    Button(
+                        onClick = {
+                            val intent = Intent(context, WelcomeActivity::class.java).apply {
+                            }
+                            context.startActivity(intent)
+                        },
+
+                        colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
+                    ) {
+                        Text(text = "Log out")
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -190,6 +240,8 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
                     fontWeight = FontWeight.Bold
                 )
                 ListOfTutorCardsToReview(Modifier, studentId, tutoringSessionsToReview)
+
+
             }
 
         }
