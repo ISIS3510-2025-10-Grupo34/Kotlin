@@ -102,6 +102,7 @@ fun Header2(modifier: Modifier){
 fun WriteReviewScreen(viewModel: WriteReviewViewModel, studentId: Int, tutoringSessionId: Int) {
     var rating by remember { mutableStateOf(0) }
     var review by remember { mutableStateOf(TextFieldValue()) }
+    var isReviewError by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     Column(
@@ -121,7 +122,10 @@ fun WriteReviewScreen(viewModel: WriteReviewViewModel, studentId: Int, tutoringS
         Text("Tap to Rate:", fontSize = 16.sp, color = Color.Black)
         Row(horizontalArrangement = Arrangement.spacedBy(-16.dp)) {
             for (i in 1..5) {
-                IconButton(onClick = { rating = i }) {
+                IconButton(onClick = {
+                    rating = i
+                    isReviewError = false // Reset error state when user selects a rating
+                }) {
                     Icon(
                         imageVector = if (i <= rating) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = null,
@@ -135,23 +139,38 @@ fun WriteReviewScreen(viewModel: WriteReviewViewModel, studentId: Int, tutoringS
 
         OutlinedTextField(
             value = review,
-            onValueChange = { review = it },
+            onValueChange = {
+                review = it
+                isReviewError = false // Reset error state when user types
+            },
             label = { Text("Review") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(onClick = {
-            viewModel.postReview(tutoringSessionId, studentId, rating, review.text) { success, message ->
-                if (success) {
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            if (rating > 0 && review.text.isNotBlank()) {
+                // Both rating and review are filled, proceed with submission
+                viewModel.postReview(tutoringSessionId, studentId, rating, review.text) { success, message ->
+                    if (success) {
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
                 }
+                val intent = Intent(context, StudentProfileActivity::class.java).apply {
+                    putExtra("ID", studentId.toString())
+                }
+                context.startActivity(intent)
+            } else {
+                // Show error message if fields are not filled
+                isReviewError = true
+                val errorMessage = when {
+                    rating == 0 && review.text.isBlank() -> "Please select a rating and write a review"
+                    rating == 0 -> "Please select a rating"
+                    else -> "Please write a review"
+                }
+                Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
             }
-            val intent = Intent(context, StudentProfileActivity::class.java).apply {
-                putExtra("ID", studentId.toString())
-            }
-            context.startActivity(intent)
         }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))) {
             Text("Submit", color = Color.White)
         }
