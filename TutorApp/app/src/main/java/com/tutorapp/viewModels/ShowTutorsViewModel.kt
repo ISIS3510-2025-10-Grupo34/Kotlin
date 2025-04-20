@@ -3,6 +3,7 @@ package com.tutorapp.viewModels
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,6 +20,8 @@ class ShowTutorsViewModel : ViewModel() {
 
     var sessions by mutableStateOf<List<TutoringSession>>(emptyList())
         private set
+
+    var emptyFilter by mutableStateOf(false)
 
     fun getAllSessions(onComplete: (List<TutoringSession>?) -> Unit) {
         viewModelScope.launch {
@@ -57,7 +60,14 @@ class ShowTutorsViewModel : ViewModel() {
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
-            sessions = filteredList
+            if(filteredList.size == 0){
+                emptyFilter = true
+                getAllSessions {  }
+            }
+            else{
+                emptyFilter = false
+                sessions = filteredList
+            }
         }
         else if(university.isNotEmpty() && course.isNotEmpty()){
             val filteredList = mutableListOf<TutoringSession>()
@@ -68,7 +78,14 @@ class ShowTutorsViewModel : ViewModel() {
             }
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
-            sessions = filteredList
+            if(filteredList.size == 0){
+                emptyFilter = true
+                getAllSessions {  }
+            }
+            else{
+                emptyFilter = false
+                sessions = filteredList
+            }
         }
         else if(university.isNotEmpty() && professor.isNotEmpty()){
             val filteredList = mutableListOf<TutoringSession>()
@@ -79,7 +96,14 @@ class ShowTutorsViewModel : ViewModel() {
             }
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
-            sessions = filteredList
+            if(filteredList.size == 0){
+                emptyFilter = true
+                getAllSessions {  }
+            }
+            else{
+                emptyFilter = false
+                sessions = filteredList
+            }
         }
         else if(course.isNotEmpty() && professor.isNotEmpty()){
             val filteredList = mutableListOf<TutoringSession>()
@@ -90,7 +114,14 @@ class ShowTutorsViewModel : ViewModel() {
             }
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
-            sessions = filteredList
+            if(filteredList.size == 0){
+                emptyFilter = true
+                getAllSessions {  }
+            }
+            else{
+                emptyFilter = false
+                sessions = filteredList
+            }
         }
 
         else if(university.isNotEmpty()){
@@ -101,7 +132,14 @@ class ShowTutorsViewModel : ViewModel() {
                 }
             }
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
-            sessions = filteredList
+            if(filteredList.size == 0){
+                emptyFilter = true
+                getAllSessions {  }
+            }
+            else{
+                emptyFilter = false
+                sessions = filteredList
+            }
         }
         else if(professor.isNotEmpty()){
             val filteredList = mutableListOf<TutoringSession>()
@@ -111,7 +149,14 @@ class ShowTutorsViewModel : ViewModel() {
                 }
             }
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
-            sessions = filteredList
+            if(filteredList.size == 0){
+                emptyFilter = true
+                getAllSessions {  }
+            }
+            else{
+                emptyFilter = false
+                sessions = filteredList
+            }
         }
         else if(course.isNotEmpty()){
             val filteredList = mutableListOf<TutoringSession>()
@@ -121,7 +166,14 @@ class ShowTutorsViewModel : ViewModel() {
                 }
             }
             RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
-            sessions = filteredList
+            if(filteredList.size == 0){
+                emptyFilter = true
+                getAllSessions {  }
+            }
+            else{
+                emptyFilter = false
+                sessions = filteredList
+            }
         }
 
         else{

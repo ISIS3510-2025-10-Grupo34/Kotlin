@@ -139,13 +139,6 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
 
     val context = LocalContext.current
 
-    /**val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-
-    RequestLocationPermission {
-        getCurrentLocation(context, fusedLocationClient) { location ->
-            Log.d("Location", "Lat: ${location.first}, Lng: ${location.second}")
-        }
-    }**/
 
     Row(
         modifier = modifier
@@ -256,17 +249,34 @@ fun FilterResultsButton(modifier: Modifier, showTutorsViewModel: ShowTutorsViewM
 fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel, token: String){
 
     val sessions = showTutorsViewModel.sessions
+    val emptyFilter = showTutorsViewModel.emptyFilter
     val scrollState = rememberScrollState()
-
-    Column(modifier = modifier
+    if (emptyFilter){
+        Text("Empty filter", modifier = modifier.fillMaxWidth())
+        Column(modifier = modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)){
-        sessions.forEach {
-            tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel)
+            verticalArrangement = Arrangement.spacedBy(20.dp)){
+            sessions.forEach {
+                    tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel)
+            }
         }
     }
+    else{
+        Column(modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)){
+            sessions.forEach {
+                    tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel)
+            }
+        }
+    }
+
+
+
 }
 
 
