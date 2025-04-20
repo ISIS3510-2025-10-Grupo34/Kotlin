@@ -223,27 +223,36 @@ fun ConnectWithStudentsScreen(
 
 
 @Composable
-fun InputField(value: String, onValueChange: (String) -> Unit, label: String) {
+fun InputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    isError: Boolean = false // Nuevo parámetro para indicar si hay un error
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
     ) {
-        Text(text = label, fontSize = 12.sp, color = Color.Gray)
+        Text(text = label, fontSize = 12.sp, color = if (isError) Color.Red else Color.Gray) // Color rojo si hay error
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF1A1A3F),
-                unfocusedBorderColor = Color.Gray.copy(alpha = 0.5f),
+                focusedBorderColor = if (isError) Color.Red else Color(0xFF1A1A3F), // Borde rojo si hay error
+                unfocusedBorderColor = if (isError) Color.Red.copy(alpha = 0.5f) else Color.Gray.copy(alpha = 0.5f), // Borde rojo si hay error
                 focusedContainerColor = Color(0xFFECE6F0),
                 unfocusedContainerColor = Color(0xFFF3EDF8)
             )
         )
+        if (isError) {
+            Text(text = "This field is required", color = Color.Red, fontSize = 10.sp) // Mensaje de error
+        }
     }
 }
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -257,27 +266,20 @@ fun NearestUniversityFinder(
     var showNotificationSettingsDialog by remember { mutableStateOf(false) }
     var permissionRequested by remember { mutableStateOf(false) }
 
-    Log.i("Permisos", "Al principio, notificationPermissionGranted: $notificationPermissionGranted")
-    Log.i("Permisos", "Al principio, notificationPermanentlyDenied: $notificationPermanentlyDenied")
-    Log.i("Permisos", "Al principio, showNotificationSettingsDialog: $showNotificationSettingsDialog")
-    Log.i("Permisos", "Al principio, permissionRequested: $permissionRequested")
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        Log.i("Permisos", "Resultado del launcher, isGranted: $isGranted")
         notificationPermissionGranted = isGranted
-        permissionRequested = true // Marcamos que la solicitud ya se ha lanzado
+        permissionRequested = true
         if (!isGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val shouldShowRationale = ActivityCompat.shouldShowRequestPermissionRationale(
                 context as Activity,
                 Manifest.permission.POST_NOTIFICATIONS
             )
             notificationPermanentlyDenied = !shouldShowRationale
-            Log.i("Permisos", "Resultado del launcher, !isGranted, shouldShowRationale: $shouldShowRationale, notificationPermanentlyDenied: $notificationPermanentlyDenied")
         } else {
             notificationPermanentlyDenied = false
-            Log.i("Permisos", "Resultado del launcher, isGranted o API < 33, notificationPermanentlyDenied: $notificationPermanentlyDenied")
         }
     }
 
@@ -296,25 +298,24 @@ fun NearestUniversityFinder(
     val channelId = "message_channel"
 
     LaunchedEffect(Unit) {
-        Log.i("Permisos", "LaunchedEffect iniciado")
         getCurrentLocation(context, fusedLocationClient) { userLocation ->
             nearestUniversity = findNearestUniversity(userLocation, universities)
         }
         createNotificationChannel(context, channelId)
 
-        // Solicitar permiso si aún no se ha hecho
         if (!notificationPermissionGranted && !permissionRequested) {
-            Log.i("Permisos", "LaunchedEffect, solicitando permiso")
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            Log.i("Permisos", "LaunchedEffect, permiso ya concedido o solicitado")
         }
-        Log.i("Permisos", "LaunchedEffect finalizado")
     }
 
     var title by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var place by remember { mutableStateOf("") }
+
+
+    var isTitleEmpty by remember { mutableStateOf(false) }
+    var isMessageEmpty by remember { mutableStateOf(false) }
+    var isPlaceEmpty by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -326,7 +327,7 @@ fun NearestUniversityFinder(
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = nearestUniversity, style = MaterialTheme.typography.bodyLarge)
 
-        // Mostrar UI condicionalmente según el estado del permiso
+
         if (notificationPermissionGranted) {
             Column(
                 modifier = Modifier
@@ -343,16 +344,34 @@ fun NearestUniversityFinder(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
-                InputField(value = title, onValueChange = { title = it }, label = "Title")
-                InputField(value = message, onValueChange = { message = it }, label = "Message")
-                InputField(value = place, onValueChange = { place = it }, label = "Place")
+                InputField(
+                    value = title,
+                    onValueChange = { title = it; isTitleEmpty = it.trim().isEmpty() },
+                    label = "Title",
+                    isError = isTitleEmpty
+                )
+                InputField(
+                    value = message,
+                    onValueChange = { message = it; isMessageEmpty = it.trim().isEmpty() },
+                    label = "Message",
+                    isError = isMessageEmpty
+                )
+                InputField(
+                    value = place,
+                    onValueChange = { place = it; isPlaceEmpty = it.trim().isEmpty() },
+                    label = "Place",
+                    isError = isPlaceEmpty
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
                     onClick = {
-                        Log.d("Permisos", "Botón de enviar presionado, notificationPermissionGranted: $notificationPermissionGranted, notificationPermanentlyDenied: $notificationPermanentlyDenied")
-                        if (notificationPermissionGranted) {
+                        isTitleEmpty = title.trim().isEmpty()
+                        isMessageEmpty = message.trim().isEmpty()
+                        isPlaceEmpty = place.trim().isEmpty()
+
+                        if (notificationPermissionGranted && !isTitleEmpty && !isMessageEmpty && !isPlaceEmpty) {
                             sendNotification(
                                 context,
                                 channelId,
@@ -363,6 +382,8 @@ fun NearestUniversityFinder(
                                 nearestUniversity,
                                 notificationCenterViewModel
                             )
+                        } else if (notificationPermissionGranted) {
+                            // Los campos vacíos se resaltarán automáticamente
                         } else {
                             if (notificationPermanentlyDenied) {
                                 showNotificationSettingsDialog = true
@@ -382,7 +403,6 @@ fun NearestUniversityFinder(
                 }
             }
         } else {
-            // Mostrar mensaje o UI alternativa cuando el permiso no está concedido
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -445,9 +465,7 @@ fun NearestUniversityFinder(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                Log.i("Permisos", "ON_RESUME")
                 val currentPermissionGranted = checkNotificationPermission(context)
-                Log.i("Permisos", "ON_RESUME, currentPermissionGranted: $currentPermissionGranted, previous notificationPermissionGranted: $notificationPermissionGranted, permissionRequested: $permissionRequested")
                 notificationPermissionGranted = currentPermissionGranted
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !currentPermissionGranted && permissionRequested) {
                     val shouldShowRationale = ActivityCompat.shouldShowRequestPermissionRationale(
@@ -455,22 +473,19 @@ fun NearestUniversityFinder(
                         Manifest.permission.POST_NOTIFICATIONS
                     )
                     notificationPermanentlyDenied = !shouldShowRationale
-                    Log.i("Permisos", "ON_RESUME, !currentPermissionGranted, permissionRequested: $permissionRequested, shouldShowRationale: $shouldShowRationale, notificationPermanentlyDenied: $notificationPermanentlyDenied")
                 } else {
                     notificationPermanentlyDenied = false
-                    Log.i("Permisos", "ON_RESUME, permissionGranted o API < 33 o !permissionRequested, notificationPermanentlyDenied: $notificationPermanentlyDenied")
                 }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            Log.i("Permisos", "DisposableEffect onDispose")
         }
-        Log.i("Permisos", "DisposableEffect creado")
         onDispose {}
     }
 }
+
 
 @SuppressLint("MissingPermission")
 fun getCurrentLocation(
