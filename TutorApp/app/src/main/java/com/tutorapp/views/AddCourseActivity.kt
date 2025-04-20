@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -25,7 +26,10 @@ import androidx.compose.ui.text.style.TextAlign
 import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.viewModels.AddCourseViewModel
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 data class UniversitySimple(
@@ -93,6 +97,7 @@ fun AddCourseScreen(
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedTime by remember { mutableStateOf(LocalTime.now()) }
     var formattedDateTime by remember { mutableStateOf("") }
+    var dateTimeError by remember { mutableStateOf<String?>(null) }
 
     // Date and time picker dialog states
     var showDatePicker by remember { mutableStateOf(false) }
@@ -102,12 +107,32 @@ fun AddCourseScreen(
     val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+
+    // Get current time in GMT-5
+    val currentGMT5DateTime = remember {
+        ZonedDateTime.now(ZoneId.of("GMT-5")).toLocalDateTime()
+    }
+
+    // Update this value when the component is first created and whenever recomposition happens
+    val currentDateTime by remember { mutableStateOf(currentGMT5DateTime) }
 
     // Update formatted date time when either date or time changes
     LaunchedEffect(selectedDate, selectedTime) {
         formattedDateTime = "${selectedDate.format(dateFormatter)}-${selectedTime.format(timeFormatter)}"
+
+        // Validate if the selected date and time are in the future compared to GMT-5
+        val selectedDateTime = LocalDateTime.of(selectedDate, selectedTime)
+        val now = ZonedDateTime.now(ZoneId.of("GMT-5")).toLocalDateTime()
+
+        dateTimeError = if (selectedDateTime.isBefore(now)) {
+            "Cannot select a date and time in the past. Please select a future date and time."
+        } else {
+            null
+        }
     }
+
+    // Validación para habilitar/deshabilitar el botón del estimador
+    val isUniversitySelected = selectedUniversity["id"] != -1
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text("TutorApp", style = MaterialTheme.typography.headlineLarge)
@@ -224,7 +249,9 @@ fun AddCourseScreen(
                     }
                 }
             },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)),
+            // Deshabilitar el botón si no se ha seleccionado una universidad
+            enabled = isUniversitySelected
         ) {
             Text("Use the estimator")
         }
@@ -241,17 +268,23 @@ fun AddCourseScreen(
             trailingIcon = {
                 IconButton(onClick = { showDatePicker = true }) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.DateRange,
+                        imageVector = Icons.Default.DateRange,
                         contentDescription = "Select date and time"
                     )
                 }
-            }
+            },
+            isError = dateTimeError != null
         )
-        Text(
-            text = "Format: DD/MM/YYYY-HH:MM",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth()
-        )
+
+        // Show error message if there's an error with the date and time
+        if (dateTimeError != null) {
+            Text(
+                text = dateTimeError!!,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -328,29 +361,74 @@ fun AddCourseScreen(
             Spacer(modifier = Modifier.height(4.dp))
             Button(
                 onClick = {
-                    if (formattedDateTime.isEmpty()) {
-                        Toast.makeText(
-                            context,
-                            "Please select date and time of availability",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        if (currentUserInfo != null) {
-                            viewModel.postTutoringSession(
-                                currentUserInfo.id.toString(),
-                                selectedCourse["id"].toString(),
-                                priceState,
-                                formattedDateTime
-                            ) { success, _ ->
-                                if (success) {
-                                    Toast.makeText(context, "The course has been created successfully", Toast.LENGTH_SHORT).show()
+                    // Realizar todas las validaciones necesarias
+                    when {
+                        selectedUniversity["id"] == -1 -> {
+                            Toast.makeText(
+                                context,
+                                "Please select a university",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        selectedCourse["id"] == -1 -> {
+                            Toast.makeText(
+                                context,
+                                "Please select a course",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        priceState.isEmpty() -> {
+                            Toast.makeText(
+                                context,
+                                "Please set a price",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        formattedDateTime.isEmpty() -> {
+                            Toast.makeText(
+                                context,
+                                "Please select date and time of availability",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        dateTimeError != null -> {
+                            Toast.makeText(
+                                context,
+                                dateTimeError,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        else -> {
+                            // Validar que la fecha y hora seleccionadas no sean anteriores a la actual (GMT-5)
+                            val selectedDateTime = LocalDateTime.of(selectedDate, selectedTime)
+                            val now = ZonedDateTime.now(ZoneId.of("GMT-5")).toLocalDateTime()
+
+                            if (selectedDateTime.isBefore(now)) {
+                                Toast.makeText(
+                                    context,
+                                    "Cannot select a date and time in the past. Please select a future date and time.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                // Todos los campos están completos y las validaciones pasaron, continuar con el proceso
+                                if (currentUserInfo != null) {
+                                    viewModel.postTutoringSession(
+                                        currentUserInfo.id.toString(),
+                                        selectedCourse["id"].toString(),
+                                        priceState,
+                                        formattedDateTime
+                                    ) { success, _ ->
+                                        if (success) {
+                                            Toast.makeText(context, "The tutoring session has been created successfully", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
                                 }
+                                val intent = Intent(context, TutorProfileActivity::class.java).apply {
+                                    putExtra("TOKEN_KEY", currentUserInfo)
+                                }
+                                context.startActivity(intent)
                             }
                         }
-                        val intent = Intent(context, TutorProfileActivity::class.java).apply {
-                            putExtra("TOKEN_KEY", currentUserInfo)
-                        }
-                        context.startActivity(intent)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
