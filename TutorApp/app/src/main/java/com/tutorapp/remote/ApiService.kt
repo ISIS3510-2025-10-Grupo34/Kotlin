@@ -40,7 +40,7 @@ interface ApiService {
 
     @POST("tutoring-sessions/")
     suspend fun postTutoringSession(@Body request: PostTutoringSessionRequest): Response<PostTutoringSessionResponse>
-  
+
     @GET("search-results-filter/")
     suspend fun getSearchResultsFilter(): Response<SearchResultFilterResponse>
 
@@ -52,7 +52,7 @@ interface ApiService {
 
     @POST("time-to-book/")
     suspend fun postTimeToBook(@Body request: PostTimeToBookRequest): Response<PostTimeToBookResponse>
-  
+
     @POST("tutor-profile-load-time/")
     suspend fun postTutorProfileLoadTime(@Body request: PostTutorProfileLoadTimeRequest): Response<PostTutorProfileLoadTimeResponse>
 
@@ -79,6 +79,8 @@ interface ApiService {
     @POST("review-percentage/")
     suspend fun reviewPercentage(@Body id: String): Response<ReviewPercentageResponse>
 
-
-
+    @GET("time-to-book-insight/")
+    suspend fun getTimeToBookInsight(
+        @Query("tutorId") tutorId: Int,
+    ): Response<GetTimeToBookInsightResponse>
 }
