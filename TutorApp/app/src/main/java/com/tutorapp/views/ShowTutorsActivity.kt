@@ -140,14 +140,6 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
 
     val context = LocalContext.current
 
-    /**val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-
-    RequestLocationPermission {
-    getCurrentLocation(context, fusedLocationClient) { location ->
-    Log.d("Location", "Lat: ${location.first}, Lng: ${location.second}")
-    }
-    }**/
-
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -257,17 +249,35 @@ fun FilterResultsButton(modifier: Modifier, showTutorsViewModel: ShowTutorsViewM
 fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel, token: String){
 
     val sessions = showTutorsViewModel.sessions
+    val emptyFilter = showTutorsViewModel.emptyFilter
     val scrollState = rememberScrollState()
-
-    Column(modifier = modifier
-        .fillMaxSize()
-        .verticalScroll(scrollState)
-        .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)){
-        sessions.forEach {
-                tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel)
+    
+    if (emptyFilter){
+        Text("No tutoring sessions matched with the filter.", modifier = modifier.fillMaxWidth())
+        Column(modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)){
+            sessions.forEach {
+                    tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel)
+            }
         }
     }
+    else{
+        Column(modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)){
+            sessions.forEach {
+                    tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel)
+            }
+        }
+    }
+
+
+
 }
 
 
@@ -744,7 +754,7 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                         isCourseSelected = false
                         isTutorSelected = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0A1128))
                 ) {
                     Text("Reset Filters", color = Color.White)
                 }
