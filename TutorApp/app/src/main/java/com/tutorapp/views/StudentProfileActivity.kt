@@ -18,10 +18,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -42,6 +47,7 @@ import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.models.TutoringSessionToReview
 import com.tutorapp.ui.theme.LightGrey
 import com.tutorapp.ui.theme.Primary
+import org.json.JSONObject
 import java.io.ByteArrayInputStream
 
 
@@ -118,23 +124,30 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
                     .padding(16.dp)
             ) {
 
-                Row(){
+                Row( modifier = Modifier
+                    .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically){
                     Text(
                         text = "TutorApp",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                     )
-                    Spacer(modifier = Modifier.width(120.dp))
-                    Button(
-                        onClick = {
-                            val intent = Intent(context, WelcomeActivity::class.java).apply {
-                            }
-                            context.startActivity(intent)
-                        },
 
-                        colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
+                    IconButton(
+                        onClick = { val intent = Intent(context, WelcomeActivity::class.java).apply {
+
+                        }
+                            context.startActivity(intent)},
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Primary, CircleShape)
                     ) {
-                        Text(text = "Log out")
+                        Icon(
+                            imageVector = Icons.Default.Logout,
+                            contentDescription = "Log Out",
+                            tint = Color.White
+                        )
                     }
                 }
 

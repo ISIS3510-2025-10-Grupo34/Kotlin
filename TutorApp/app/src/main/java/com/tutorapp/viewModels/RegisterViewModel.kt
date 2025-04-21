@@ -91,9 +91,9 @@ class RegisterViewModel : ViewModel() {
         }
 
     }
-    fun majors(){
+    fun majors(university: String){
         viewModelScope.launch {
-            val response = RetrofitClient.instance.majors()
+            val response = RetrofitClient.instance.majors(university)
             println(response.body())
             println("aaaa")
             response.body()?.let { _majors.value=it.majors }

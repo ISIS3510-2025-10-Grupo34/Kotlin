@@ -167,7 +167,7 @@ fun StudentRegisterScreen(
 ) {
     LaunchedEffect(Unit) {
         viewModel.universities()
-        viewModel.majors()
+
     }
 
     var nameState by rememberSaveable { mutableStateOf(name) }
@@ -227,34 +227,7 @@ fun StudentRegisterScreen(
                 singleLine = true
             )
 
-            Box {
-                OutlinedTextField(
-                    value = majorState,
-                    onValueChange = {},
-                    label = { Text("Major") },
-                    isError = majorError,
-                    readOnly = true,
-                    trailingIcon = {
-                        IconButton(onClick = { expanded = !expanded }) {
-                            Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
-                        }
-                    },
-                    modifier = fieldModifier
-                )
 
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    majors.forEach { major ->
-                        DropdownMenuItem(
-                            text = { Text(major) },
-                            onClick = {
-                                majorState = major
-                                majorError = false
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
 
             Box {
                 OutlinedTextField(
@@ -278,7 +251,46 @@ fun StudentRegisterScreen(
                             onClick = {
                                 universityState = university
                                 universityError = false
+                                majorState = ""
                                 expanded2 = false
+                                viewModel.majors(university)
+
+                            }
+                        )
+                    }
+                }
+            }
+            Box {
+                OutlinedTextField(
+                    value = majorState,
+                    onValueChange = {},
+                    label = { Text("Major") },
+                    isError = majorError,
+                    readOnly = true,
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            if (universityState.isBlank()) {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("Please select a university first")
+                                }
+                            } else {
+                                expanded = !expanded
+                            }
+                        }) {
+                            Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
+                        }
+                    },
+                    modifier = fieldModifier
+                )
+
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    majors.forEach { major ->
+                        DropdownMenuItem(
+                            text = { Text(major) },
+                            onClick = {
+                                majorState = major
+                                majorError = false
+                                expanded = false
                             }
                         )
                     }

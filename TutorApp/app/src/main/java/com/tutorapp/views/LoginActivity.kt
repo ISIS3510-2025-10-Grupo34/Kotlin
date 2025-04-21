@@ -23,6 +23,10 @@ import com.google.gson.Gson
 import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.ui.theme.Typography
 
+object Session {
+    var userid: Int? = null
+    var role: String? = null
+}
 
 class LoginActivity : ComponentActivity() {
     private val loginViewModel: LoginViewModel by viewModels()
@@ -107,7 +111,8 @@ fun LoginScreen(viewModel: LoginViewModel) {
                 viewModel.login(email, password) { success, message ->
                     if (success) {
                         Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
-
+                        Session.userid = message?.id
+                        Session.role = message?.role
                         if (message?.role == "tutor") {
                             val intent = Intent(context, TutorProfileActivity::class.java).apply {
                                 putExtra("TOKEN_KEY", message)
