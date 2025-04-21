@@ -88,8 +88,8 @@ class ShowTutorsActivity: ComponentActivity(){
                 }
                 val tutorsByCourse: Map<String, List<String>>? = data?.data?.flatMap { (_, university) ->
                     university.courses.map { (courseName, course) ->
-                    courseName to course.tutors_names
-                }
+                        courseName to course.tutors_names
+                    }
                 }?.toMap()
 
                 Log.i("universities", universities.toString() )
@@ -98,6 +98,7 @@ class ShowTutorsActivity: ComponentActivity(){
                 val timeToBookStartTime = System.currentTimeMillis()
                 val prefs = getSharedPreferences("timeToBookPrefs", MODE_PRIVATE)
                 prefs.edit().putLong("timeToBookStart", timeToBookStartTime).apply()
+                Log.i("mitag", "tiempo iniciado")
                 setContent{
                     TutorAppTheme {
                         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -138,7 +139,6 @@ fun ShowTutorsScreen(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMode
 fun TutorScreenHeader(modifier: Modifier,token: String) {
 
     val context = LocalContext.current
-
 
     Row(
         modifier = modifier
@@ -251,6 +251,7 @@ fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMode
     val sessions = showTutorsViewModel.sessions
     val emptyFilter = showTutorsViewModel.emptyFilter
     val scrollState = rememberScrollState()
+    
     if (emptyFilter){
         Text("No tutoring sessions matched with the filter.", modifier = modifier.fillMaxWidth())
         Column(modifier = modifier
@@ -358,10 +359,10 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: Strin
                 val startTime = prefs.getLong("timeToBookStart", 0L)
                 if (startTime != 0L) {
                     val timeToBook = System.currentTimeMillis() - startTime
-                    showTutorsViewModel.postTimeToBook(timeToBook.toFloat())
-
+                    showTutorsViewModel.postTimeToBook(timeToBook.toFloat(), tutoringSession.tutor_id.toInt())
                     prefs.edit().remove("timeToBookStart").apply()
                 }
+
                 val url = "https://wa.me/57"+tutoringSession.tutor_phone_number
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                 context.startActivity(intent)
@@ -369,7 +370,7 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: Strin
             modifier = Modifier.align(Alignment.End),
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
-            ) {
+        ) {
             Text(text = "Book", fontSize = 16.sp, color = Color.White)
         }
     }
@@ -719,7 +720,7 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 Arrangement.spacedBy(8.dp, alignment = Alignment.CenterHorizontally),

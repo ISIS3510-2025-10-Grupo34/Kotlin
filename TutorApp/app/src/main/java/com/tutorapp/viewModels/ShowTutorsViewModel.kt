@@ -198,11 +198,12 @@ class ShowTutorsViewModel : ViewModel() {
         }
     }
 
-    fun postTimeToBook(timeToBook: Float) {
+    fun postTimeToBook(timeToBook: Float, tutorId: Int) {
         viewModelScope.launch {
             try {
                 val body = PostTimeToBookRequest(
-                    timeToBook = timeToBook
+                    duration = timeToBook,
+                    tutorId = tutorId
                 )
                 val response = RetrofitClient.instance.postTimeToBook(body)
                 Log.i("analytics", response.body()?.data ?: "")
@@ -214,7 +215,7 @@ class ShowTutorsViewModel : ViewModel() {
 
     fun bookingTime(){
         viewModelScope.launch {
-                RetrofitClient.instance.bookingTime()
-        }
+            RetrofitClient.instance.bookingTime()
+            }
     }
 }
