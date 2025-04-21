@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tutorapp.models.GetTimeToBookInsightResponse
 import com.tutorapp.models.GetTutorProfileResponse
 import com.tutorapp.models.Review
 import com.tutorapp.models.LoginTokenDecoded
@@ -57,9 +58,13 @@ class TutorProfileActivity : ComponentActivity() {
                 val loadTime = (System.currentTimeMillis() - startTime).toFloat()
                 tutorProfileViewModel.postProfileLoadTime(loadTime)
                 if (success) {
-                    setContent {
-                        if (data != null) {
-                            TutorProfileScreen(tutorProfileViewModel, currentUserInfo, data)
+                    tutorProfileViewModel.getTimeToBookInsight(tutorId) { successTimeToBookInsight, timeToBookInsightData ->
+                        if (successTimeToBookInsight) {
+                            setContent {
+                                if (data != null && timeToBookInsightData != null) {
+                                    TutorProfileScreen(tutorProfileViewModel, currentUserInfo, data, timeToBookInsightData)
+                                }
+                            }
                         }
                     }
                 }
@@ -135,7 +140,8 @@ fun TutorProfileHeader(modifier: Modifier) {
 fun TutorProfileScreen(
     viewModel: TutorProfileViewModel,
     currentUserInfo: LoginTokenDecoded?,
-    tutorProfileInfo: GetTutorProfileResponse
+    tutorProfileInfo: GetTutorProfileResponse,
+    timeToBookInsightData: GetTimeToBookInsightResponse
 ) {
     val context = LocalContext.current
 
@@ -217,6 +223,13 @@ fun TutorProfileScreen(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
+        }
+
+        if (currentUserInfo?.role == "tutor" && timeToBookInsightData.time != -1) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = "Time it takes a student to book with you:", fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = timeToBookInsightData.time.toString() + " seconds." + timeToBookInsightData.message, fontSize = 16.sp, textAlign = TextAlign.Center)
         }
 
         if (currentUserInfo?.role == "tutor") {
