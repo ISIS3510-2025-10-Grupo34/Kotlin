@@ -753,7 +753,7 @@ fun FilterBottomSheet(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMod
                         isCourseSelected = false
                         isTutorSelected = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0A1128))
                 ) {
                     Text("Reset Filters", color = Color.White)
                 }
