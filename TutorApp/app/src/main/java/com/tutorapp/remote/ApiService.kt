@@ -23,8 +23,8 @@ interface ApiService {
     @GET("universities/")
     suspend fun universities(): Response<UniversitiesResponse>
 
-    @GET("majors/")
-    suspend fun majors(): Response<MajorsResponse>
+    @POST("majors/")
+    suspend fun majors(@Body university: String): Response<MajorsResponse>
 
     @GET("tutoring-sessions-with-names/")
     suspend fun tutoringSessions(): Response<List<TutoringSession>>
@@ -83,4 +83,5 @@ interface ApiService {
     suspend fun getTimeToBookInsight(
         @Query("tutorId") tutorId: Int,
     ): Response<GetTimeToBookInsightResponse>
+
 }

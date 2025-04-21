@@ -63,6 +63,7 @@ import com.tutorapp.viewModels.ShowTutorsViewModel
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import android.content.Context
+import androidx.activity.compose.BackHandler
 import com.google.android.gms.location.LocationServices
 
 
@@ -125,6 +126,9 @@ class ShowTutorsActivity: ComponentActivity(){
 @Composable
 fun ShowTutorsScreen(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel, token: String, universities: List<UniversitySimple>,
                      coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
+    BackHandler(enabled = true) {
+
+    }
     Column (modifier = modifier.fillMaxSize(1f)){
         TutorScreenHeader(modifier = Modifier.height(IntrinsicSize.Min),token)
         Spacer(modifier = Modifier.height(20.dp))

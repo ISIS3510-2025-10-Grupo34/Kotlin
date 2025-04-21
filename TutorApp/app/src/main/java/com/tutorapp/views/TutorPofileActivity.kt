@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -85,54 +86,50 @@ fun TutorProfileHeader(modifier: Modifier) {
             fontWeight = FontWeight.Bold,
         )
 
-        Button(
-            onClick = {
-                val intent = Intent(context, WelcomeActivity::class.java).apply {
-                }
-                context.startActivity(intent)
-            },
 
-            colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
-        ) {
-            Text(text = "Log out")
-        }
         Row(
-            modifier = Modifier
-                .weight(0.5f)
-                .fillMaxWidth()
-                .padding(horizontal = 25.dp, vertical = 35.dp),
-            horizontalArrangement = Arrangement.Absolute.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(25.dp)
+
         ) {
-            IconButton(
-                onClick = {
-                    val intent = Intent(context,
-                        ConnectWithStudentsActivity::class.java
+            if(Session.role == "tutor") {
+                IconButton(
+                    onClick = {
+                        val intent = Intent(
+                            context,
+                            ConnectWithStudentsActivity::class.java
+                        )
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier
+                        .size(25.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF192650))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = "Notifications",
+                        tint = Color.White
                     )
-                    context.startActivity(intent)
-                },
-                modifier = Modifier
-                    .size(25.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF192650))
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = "Notifications",
-                    tint = Color.White
-                )
-            }
-            IconButton(
-                onClick = {},
-                modifier = Modifier
-                    .size(25.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF192650))
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AccountCircle,
-                    contentDescription = "Profile",
-                    tint = Color.White
-                )
+                }
+                IconButton(
+                    onClick = {
+                        val intent = Intent(
+                            context,
+                            WelcomeActivity::class.java
+                        )
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier
+                        .size(25.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF192650))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Logout,
+                        contentDescription = "Log out",
+                        tint = Color.White
+                    )
+                }
             }
         }
     }
@@ -263,17 +260,7 @@ fun TutorProfileScreen(
         tutorProfileInfo.data.reviews.forEach { review ->
             TutorReviewItem(review)
         }
-        Button(
-            onClick = {
-                val intent = Intent(context, WelcomeActivity::class.java).apply {
-                }
-                context.startActivity(intent)
-            },
-            modifier = Modifier.align(Alignment.End),
-            colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )
-        ) {
-            Text(text = "Log out")
-        }
+
     }
 }
 
