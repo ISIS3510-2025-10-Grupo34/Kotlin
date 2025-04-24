@@ -7,21 +7,60 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tutorapp.cache.LRUCache
 import com.tutorapp.models.PostFilterCounterIncreaseRequest
 import com.tutorapp.models.PostTimeToBookRequest
 import com.tutorapp.models.SearchResultFilterResponse
 import com.tutorapp.models.TutoringSession
 import com.tutorapp.remote.RetrofitClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class ShowTutorsViewModel : ViewModel() {
 
+    private val cacheCapacity = 10
+    private val tutorCardCache = LRUCache<Int, TutoringSession>(cacheCapacity)
+
+    private val _cachedSessions = MutableStateFlow<List<TutoringSession>>(emptyList())
+    val cachedSessions: StateFlow<List<TutoringSession>> = _cachedSessions
+
     var sessions by mutableStateOf<List<TutoringSession>>(emptyList())
         private set
 
     var emptyFilter by mutableStateOf(false)
+
+    init {
+        _cachedSessions.value = tutorCardCache.values.toList()
+        sessions = tutorCardCache.values.toList()
+    }
+
+    fun loadInitialSessions(){
+        viewModelScope.launch{
+            _cachedSessions.value = tutorCardCache.values.toList()
+            sessions = tutorCardCache.values.toList()
+
+            try{
+                val response = RetrofitClient.instance.tutoringSessions()
+                if(response.isSuccessful){
+                    val fetchedSessions = response.body()?.filter{it.student == null } ?: emptyList()
+
+                    tutorCardCache.clear()
+                    fetchedSessions.forEach{ session ->
+                        tutorCardCache[session.id] = session
+                    }
+                    _cachedSessions.value = tutorCardCache.values.toList()
+                    sessions = tutorCardCache.values.toList()
+                }else{
+                    println("Error al cargar sesiones iniciales: ${response.code()}")
+                }
+            }catch (e:Exception){
+                println("Excepción al cargar sesiones iniciales: ${e.message}")
+            }
+        }
+    }
 
     fun getAllSessions(onComplete: (List<TutoringSession>?) -> Unit) {
         viewModelScope.launch {
@@ -48,7 +87,90 @@ class ShowTutorsViewModel : ViewModel() {
         }
     }
 
-    suspend fun onFilterClick(university:String, course:String, professor:String){
+    suspend fun onFilterClick(university: String, course: String, professor: String) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.instance.tutoringSessions()
+                val allSessions = response.body()?.filter { it.student == null } ?: emptyList()
+                val filteredList = mutableListOf<TutoringSession>()
+
+                if (university.isNotEmpty() && professor.isNotEmpty() && course.isNotEmpty()) {
+                    filteredList.addAll(allSessions.filter {
+                        it.tutor.contains(professor, ignoreCase = true) &&
+                                it.course.contains(course, ignoreCase = true) &&
+                                it.university.contains(university, ignoreCase = true)
+                    })
+                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+                } else if (university.isNotEmpty() && course.isNotEmpty()) {
+                    filteredList.addAll(allSessions.filter {
+                        it.course.contains(course, ignoreCase = true) &&
+                                it.university.contains(university, ignoreCase = true)
+                    })
+                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+                } else if (university.isNotEmpty() && professor.isNotEmpty()) {
+                    filteredList.addAll(allSessions.filter {
+                        it.tutor.contains(professor, ignoreCase = true) &&
+                                it.university.contains(university, ignoreCase = true)
+                    })
+                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+                } else if (course.isNotEmpty() && professor.isNotEmpty()) {
+                    filteredList.addAll(allSessions.filter {
+                        it.tutor.contains(professor, ignoreCase = true) &&
+                                it.course.contains(course, ignoreCase = true)
+                    })
+                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+                } else if (university.isNotEmpty()) {
+                    filteredList.addAll(allSessions.filter {
+                        it.university.contains(university, ignoreCase = true)
+                    })
+                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+                } else if (professor.isNotEmpty()) {
+                    filteredList.addAll(allSessions.filter {
+                        it.tutor.contains(professor, ignoreCase = true)
+                    })
+                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+                } else if (course.isNotEmpty()) {
+                    filteredList.addAll(allSessions.filter {
+                        it.course.contains(course, ignoreCase = true)
+                    })
+                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+                } else {
+                    sessions = tutorCardCache.values.toList()
+                    emptyFilter = false
+                    return@launch
+                }
+
+                if (filteredList.isEmpty()) {
+                    emptyFilter = true
+                    sessions = tutorCardCache.values.toList()
+                } else {
+                    emptyFilter = false
+                    sessions = filteredList
+                    /*emptyFilter = false
+                    sessions = filteredList
+
+                    tutorCardCache.clear()
+                    filteredList.forEach { session ->
+                        tutorCardCache[session.id] = session
+                    }
+                    _cachedSessions.value = tutorCardCache.values.toList()*/
+                }
+
+            } catch (e: Exception) {
+                println("Error al aplicar filtros: ${e.message}")
+                // En caso de error, mostrar lo que esté en caché
+                sessions = tutorCardCache.values.toList()
+                emptyFilter = false
+            }
+        }
+    }
+
+    /*suspend fun onFilterClick(university:String, course:String, professor:String){
         val response = RetrofitClient.instance.tutoringSessions()
         if(university.isNotEmpty()  && professor.isNotEmpty() && course.isNotEmpty()){
             val filteredList = mutableListOf<TutoringSession>()
@@ -180,7 +302,7 @@ class ShowTutorsViewModel : ViewModel() {
             getAllSessions {  }
         }
 
-    }
+    }*/
 
     fun getSearchResults(onResult: (Boolean, SearchResultFilterResponse?) -> Unit) {
         viewModelScope.launch {
@@ -217,5 +339,9 @@ class ShowTutorsViewModel : ViewModel() {
         viewModelScope.launch {
             RetrofitClient.instance.bookingTime()
             }
+    }
+
+    fun getCachedSession(sessionId: Int): TutoringSession?{
+        return tutorCardCache[sessionId]
     }
 }

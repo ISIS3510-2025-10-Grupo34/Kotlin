@@ -71,10 +71,10 @@ import com.google.android.gms.location.LocationServices
 class ShowTutorsActivity: ComponentActivity(){
     private val showTutorsViewModel: ShowTutorsViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
-        showTutorsViewModel.getAllSessions {  }
-
         super.onCreate(savedInstanceState)
         val token = intent.getStringExtra("TOKEN_KEY") ?: ""
+
+        showTutorsViewModel.loadInitialSessions()
 
         showTutorsViewModel.getSearchResults(){ sucess, data ->
             if(sucess){
