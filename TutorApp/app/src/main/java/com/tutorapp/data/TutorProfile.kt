@@ -49,6 +49,9 @@ interface TutorProfileDao {
     @Query("SELECT * FROM reviews WHERE tutorId = :tutorId")
     suspend fun loadReviews(tutorId: Int = 1): List<ReviewEntity>
 
+    @Query("DELETE FROM reviews WHERE tutorId = :tutorId")
+    suspend fun clearReviews(tutorId: Int)
+
     @Query("SELECT * FROM insight LIMIT 1")
     suspend fun loadInsight(): InsightEntity?
 }

@@ -6,7 +6,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [StudentFormEntity::class, TutorFormEntity::class],
+    entities = [
+        StudentFormEntity::class,
+        TutorFormEntity::class,
+        TutorProfileEntity::class,
+        ReviewEntity::class,
+        InsightEntity::class
+    ],
     version = 1
 )
 abstract class AppDatabase : RoomDatabase() {

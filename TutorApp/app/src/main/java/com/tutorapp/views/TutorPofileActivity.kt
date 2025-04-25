@@ -43,17 +43,17 @@ import android.os.*
 import android.util.Log
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import com.tutorapp.data.TutorProfileViewModelFactory
 
 class TutorProfileActivity : ComponentActivity() {
-    private val viewModel: TutorProfileViewModel by viewModels()
     private lateinit var connectivityManager: ConnectivityManager
     private lateinit var networkRequest: NetworkRequest
-    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(network: Network) {
-            super.onAvailable(network)
-            viewModel.loadTutorProfile(currentTutorId)
-        }
+
+    // usar nuestro ViewModelFactory
+    private val viewModel: TutorProfileViewModel by viewModels {
+        TutorProfileViewModelFactory(application)
     }
+
     private var currentTutorId: Int = 3
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,26 +62,29 @@ class TutorProfileActivity : ComponentActivity() {
         currentTutorId = if (currentUserInfo?.role == "tutor") currentUserInfo.id
         else intent.getIntExtra("TUTOR_ID", 3)
 
-        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        // registrar callback red
+        connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         networkRequest = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
-        connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
+        connectivityManager.registerNetworkCallback(networkRequest, object: ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                viewModel.loadTutorProfile(currentTutorId)
+            }
+        })
 
+        // inicializar carga
         viewModel.loadTutorProfile(currentTutorId)
 
         setContent {
             val uiState by viewModel.uiState.collectAsState()
-            TutorProfileContent(
-                uiState = uiState,
-                currentUserInfo = currentUserInfo
-            )
+            TutorProfileContent(uiState, currentUserInfo)
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        connectivityManager.unregisterNetworkCallback(networkCallback)
+        connectivityManager.unregisterNetworkCallback(ConnectivityManager.NetworkCallback())
     }
 }
 
