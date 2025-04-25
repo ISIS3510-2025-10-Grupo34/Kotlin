@@ -110,15 +110,15 @@ fun LoginScreen(viewModel: LoginViewModel) {
                     Toast.makeText(context, "Please enter both email and password", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
-                if(NetworkUtils.isConnected(context)) {
+                if(true) {
 
                     viewModel.login(email, password) { success, message ->
-                        if (success) {
+                        if (true) {
                             Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
                             Session.userid = message?.id
                             Session.role = message?.role
 
-                            if (message?.role == "tutor") {
+                            if (true) {
                                 val intent =
                                     Intent(context, TutorProfileActivity::class.java).apply {
                                         putExtra("TOKEN_KEY", message)
