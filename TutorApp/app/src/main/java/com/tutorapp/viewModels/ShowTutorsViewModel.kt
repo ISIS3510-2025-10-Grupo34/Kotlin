@@ -1,5 +1,9 @@
 package com.tutorapp.viewModels
 
+import android.app.Application
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,8 +22,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.lifecycle.AndroidViewModel
 
-class ShowTutorsViewModel : ViewModel() {
+class ShowTutorsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val cacheCapacity = 10
     private val tutorCardCache = LRUCache<Int, TutoringSession>(cacheCapacity)
@@ -37,27 +42,31 @@ class ShowTutorsViewModel : ViewModel() {
         sessions = tutorCardCache.values.toList()
     }
 
-    fun loadInitialSessions(){
-        viewModelScope.launch{
+    fun loadInitialSessions() {
+        viewModelScope.launch {
+
             _cachedSessions.value = tutorCardCache.values.toList()
             sessions = tutorCardCache.values.toList()
 
-            try{
-                val response = RetrofitClient.instance.tutoringSessions()
-                if(response.isSuccessful){
-                    val fetchedSessions = response.body()?.filter{it.student == null } ?: emptyList()
-
-                    tutorCardCache.clear()
-                    fetchedSessions.forEach{ session ->
-                        tutorCardCache[session.id] = session
+            if (isNetworkAvailable()) {
+                try {
+                    val response = RetrofitClient.instance.tutoringSessions()
+                    if (response.isSuccessful) {
+                        val fetchedSessions = response.body()?.filter { it.student == null } ?: emptyList()
+                        tutorCardCache.clear()
+                        fetchedSessions.forEach { session ->
+                            tutorCardCache[session.id] = session
+                        }
+                        _cachedSessions.value = tutorCardCache.values.toList()
+                        sessions = tutorCardCache.values.toList()
+                    } else {
+                        println("Error al cargar sesiones iniciales: ${response.code()}")
                     }
-                    _cachedSessions.value = tutorCardCache.values.toList()
-                    sessions = tutorCardCache.values.toList()
-                }else{
-                    println("Error al cargar sesiones iniciales: ${response.code()}")
+                } catch (e: Exception) {
+                    println("Excepción al cargar sesiones iniciales: ${e.message}")
                 }
-            }catch (e:Exception){
-                println("Excepción al cargar sesiones iniciales: ${e.message}")
+            } else {
+                Log.i("Network", "No hay conexión a internet al cargar las sesiones iniciales. Se mostrará la caché.")
             }
         }
     }
@@ -88,221 +97,145 @@ class ShowTutorsViewModel : ViewModel() {
     }
 
     suspend fun onFilterClick(university: String, course: String, professor: String) {
-        viewModelScope.launch {
-            try {
-                val response = RetrofitClient.instance.tutoringSessions()
-                val allSessions = response.body()?.filter { it.student == null } ?: emptyList()
-                val filteredList = mutableListOf<TutoringSession>()
+        if(isNetworkAvailable()){
+            viewModelScope.launch {
+                try {
+                    val response = RetrofitClient.instance.tutoringSessions()
+                    val allSessions = response.body()?.filter { it.student == null } ?: emptyList()
+                    val filteredList = mutableListOf<TutoringSession>()
+
+                    if (university.isNotEmpty() && professor.isNotEmpty() && course.isNotEmpty()) {
+                        filteredList.addAll(allSessions.filter {
+                            it.tutor.contains(professor, ignoreCase = true) &&
+                                    it.course.contains(course, ignoreCase = true) &&
+                                    it.university.contains(university, ignoreCase = true)
+                        })
+                        RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+                        RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+                        RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+                    } else if (university.isNotEmpty() && course.isNotEmpty()) {
+                        filteredList.addAll(allSessions.filter {
+                            it.course.contains(course, ignoreCase = true) &&
+                                    it.university.contains(university, ignoreCase = true)
+                        })
+                        RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+                        RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+                    } else if (university.isNotEmpty() && professor.isNotEmpty()) {
+                        filteredList.addAll(allSessions.filter {
+                            it.tutor.contains(professor, ignoreCase = true) &&
+                                    it.university.contains(university, ignoreCase = true)
+                        })
+                        RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+                        RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+                    } else if (course.isNotEmpty() && professor.isNotEmpty()) {
+                        filteredList.addAll(allSessions.filter {
+                            it.tutor.contains(professor, ignoreCase = true) &&
+                                    it.course.contains(course, ignoreCase = true)
+                        })
+                        RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+                        RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+                    } else if (university.isNotEmpty()) {
+                        filteredList.addAll(allSessions.filter {
+                            it.university.contains(university, ignoreCase = true)
+                        })
+                        RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
+                    } else if (professor.isNotEmpty()) {
+                        filteredList.addAll(allSessions.filter {
+                            it.tutor.contains(professor, ignoreCase = true)
+                        })
+                        RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+                    } else if (course.isNotEmpty()) {
+                        filteredList.addAll(allSessions.filter {
+                            it.course.contains(course, ignoreCase = true)
+                        })
+                        RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
+                    } else {
+                        sessions = tutorCardCache.values.toList()
+                        emptyFilter = false
+                        return@launch
+                    }
+
+                    if (filteredList.isEmpty()) {
+                        emptyFilter = true
+                        sessions = tutorCardCache.values.toList()
+                    } else {
+                        emptyFilter = false
+                        sessions = filteredList
+                        /*emptyFilter = false
+                        sessions = filteredList
+
+                        tutorCardCache.clear()
+                        filteredList.forEach { session ->
+                            tutorCardCache[session.id] = session
+                        }
+                        _cachedSessions.value = tutorCardCache.values.toList()*/
+                    }
+
+                } catch (e: Exception) {
+                    println("Error al aplicar filtros: ${e.message}")
+                    // En caso de error, mostrar lo que esté en caché
+                    sessions = tutorCardCache.values.toList()
+                    emptyFilter = false
+                }
+            }
+        }
+        else{
+            viewModelScope.launch {
+                val cachedSessionsList = tutorCardCache.values.toList()
+                val filteredCachedList = mutableListOf<TutoringSession>()
 
                 if (university.isNotEmpty() && professor.isNotEmpty() && course.isNotEmpty()) {
-                    filteredList.addAll(allSessions.filter {
+                    filteredCachedList.addAll(cachedSessionsList.filter {
                         it.tutor.contains(professor, ignoreCase = true) &&
                                 it.course.contains(course, ignoreCase = true) &&
                                 it.university.contains(university, ignoreCase = true)
                     })
-                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
-                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
-                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
+
                 } else if (university.isNotEmpty() && course.isNotEmpty()) {
-                    filteredList.addAll(allSessions.filter {
+                    filteredCachedList.addAll(cachedSessionsList.filter {
                         it.course.contains(course, ignoreCase = true) &&
                                 it.university.contains(university, ignoreCase = true)
                     })
-                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
-                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
                 } else if (university.isNotEmpty() && professor.isNotEmpty()) {
-                    filteredList.addAll(allSessions.filter {
+                    filteredCachedList.addAll(cachedSessionsList.filter {
                         it.tutor.contains(professor, ignoreCase = true) &&
                                 it.university.contains(university, ignoreCase = true)
                     })
-                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
-                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
                 } else if (course.isNotEmpty() && professor.isNotEmpty()) {
-                    filteredList.addAll(allSessions.filter {
+                    filteredCachedList.addAll(cachedSessionsList.filter {
                         it.tutor.contains(professor, ignoreCase = true) &&
                                 it.course.contains(course, ignoreCase = true)
                     })
-                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
-                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
                 } else if (university.isNotEmpty()) {
-                    filteredList.addAll(allSessions.filter {
+                    filteredCachedList.addAll(cachedSessionsList.filter {
                         it.university.contains(university, ignoreCase = true)
                     })
-                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
                 } else if (professor.isNotEmpty()) {
-                    filteredList.addAll(allSessions.filter {
+                    filteredCachedList.addAll(cachedSessionsList.filter {
                         it.tutor.contains(professor, ignoreCase = true)
                     })
-                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
                 } else if (course.isNotEmpty()) {
-                    filteredList.addAll(allSessions.filter {
+                    filteredCachedList.addAll(cachedSessionsList.filter {
                         it.course.contains(course, ignoreCase = true)
                     })
-                    RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
                 } else {
                     sessions = tutorCardCache.values.toList()
                     emptyFilter = false
                     return@launch
                 }
 
-                if (filteredList.isEmpty()) {
+                if (filteredCachedList.isEmpty()) {
                     emptyFilter = true
-                    sessions = tutorCardCache.values.toList()
+                    sessions = cachedSessionsList // Mostrar la caché aunque no haya coincidencias
                 } else {
                     emptyFilter = false
-                    sessions = filteredList
-                    /*emptyFilter = false
-                    sessions = filteredList
-
-                    tutorCardCache.clear()
-                    filteredList.forEach { session ->
-                        tutorCardCache[session.id] = session
-                    }
-                    _cachedSessions.value = tutorCardCache.values.toList()*/
+                    sessions = filteredCachedList
                 }
-
-            } catch (e: Exception) {
-                println("Error al aplicar filtros: ${e.message}")
-                // En caso de error, mostrar lo que esté en caché
-                sessions = tutorCardCache.values.toList()
-                emptyFilter = false
             }
         }
     }
 
-    /*suspend fun onFilterClick(university:String, course:String, professor:String){
-        val response = RetrofitClient.instance.tutoringSessions()
-        if(university.isNotEmpty()  && professor.isNotEmpty() && course.isNotEmpty()){
-            val filteredList = mutableListOf<TutoringSession>()
-            for (element in response.body() ?: emptyList()){
-                if(element.tutor.contains(professor, ignoreCase = true) && element.course.contains(course, ignoreCase = true) && element.university.contains(university, ignoreCase = true)){
-                    filteredList.add(element)
-                }
-            }
-            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
-            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
-            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
-            if(filteredList.size == 0){
-                emptyFilter = true
-                getAllSessions {  }
-            }
-            else{
-                emptyFilter = false
-                sessions = filteredList
-            }
-        }
-        else if(university.isNotEmpty() && course.isNotEmpty()){
-            val filteredList = mutableListOf<TutoringSession>()
-            for (element in response.body() ?: emptyList()){
-                if(element.course.contains(course, ignoreCase = true) && element.university.contains(university, ignoreCase = true)){
-                    filteredList.add(element)
-                }
-            }
-            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
-            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
-            if(filteredList.size == 0){
-                emptyFilter = true
-                getAllSessions {  }
-            }
-            else{
-                emptyFilter = false
-                sessions = filteredList
-            }
-        }
-        else if(university.isNotEmpty() && professor.isNotEmpty()){
-            val filteredList = mutableListOf<TutoringSession>()
-            for (element in response.body() ?: emptyList()){
-                if(element.course.contains(professor, ignoreCase = true) && element.university.contains(university, ignoreCase = true)){
-                    filteredList.add(element)
-                }
-            }
-            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
-            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
-            if(filteredList.size == 0){
-                emptyFilter = true
-                getAllSessions {  }
-            }
-            else{
-                emptyFilter = false
-                sessions = filteredList
-            }
-        }
-        else if(course.isNotEmpty() && professor.isNotEmpty()){
-            val filteredList = mutableListOf<TutoringSession>()
-            for (element in response.body() ?: emptyList()){
-                if(element.course.contains(professor, ignoreCase = true) && element.tutor.contains(professor, ignoreCase = true)){
-                    filteredList.add(element)
-                }
-            }
-            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
-            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
-            if(filteredList.size == 0){
-                emptyFilter = true
-                getAllSessions {  }
-            }
-            else{
-                emptyFilter = false
-                sessions = filteredList
-            }
-        }
 
-        else if(university.isNotEmpty()){
-            val filteredList = mutableListOf<TutoringSession>()
-            for (element in response.body() ?: emptyList()){
-                if(element.university.contains(university, ignoreCase = true)){
-                    filteredList.add(element)
-                }
-            }
-            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("university"))
-            if(filteredList.size == 0){
-                emptyFilter = true
-                getAllSessions {  }
-            }
-            else{
-                emptyFilter = false
-                sessions = filteredList
-            }
-        }
-        else if(professor.isNotEmpty()){
-            val filteredList = mutableListOf<TutoringSession>()
-            for (element in response.body() ?: emptyList()){
-                if(element.tutor.contains(professor, ignoreCase = true)){
-                    filteredList.add(element)
-                }
-            }
-            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("tutor"))
-            if(filteredList.size == 0){
-                emptyFilter = true
-                getAllSessions {  }
-            }
-            else{
-                emptyFilter = false
-                sessions = filteredList
-            }
-        }
-        else if(course.isNotEmpty()){
-            val filteredList = mutableListOf<TutoringSession>()
-            for (element in response.body() ?: emptyList()){
-                if(element.course.contains(course, ignoreCase = true)){
-                    filteredList.add(element)
-                }
-            }
-            RetrofitClient.instance.increaseFilterCount(PostFilterCounterIncreaseRequest("course"))
-            if(filteredList.size == 0){
-                emptyFilter = true
-                getAllSessions {  }
-            }
-            else{
-                emptyFilter = false
-                sessions = filteredList
-            }
-        }
-
-        else{
-            getAllSessions {  }
-        }
-
-    }*/
 
     fun getSearchResults(onResult: (Boolean, SearchResultFilterResponse?) -> Unit) {
         viewModelScope.launch {
@@ -343,5 +276,13 @@ class ShowTutorsViewModel : ViewModel() {
 
     fun getCachedSession(sessionId: Int): TutoringSession?{
         return tutorCardCache[sessionId]
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        // Implementación de la verificación de red (como la que tenías antes)
+        val connectivityManager = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork
+        val capabilities = connectivityManager.getNetworkCapabilities(network)
+        return capabilities != null && (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
     }
 }
