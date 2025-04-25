@@ -21,7 +21,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 import com.google.gson.Gson
 import com.tutorapp.models.LoginTokenDecoded
+import com.tutorapp.remote.NetworkUtils
 import com.tutorapp.ui.theme.Typography
+import kotlinx.coroutines.launch
 
 object Session {
     var userid: Int? = null
@@ -45,10 +47,11 @@ fun LoginScreen(viewModel: LoginViewModel) {
     var password by remember { mutableStateOf("") }
     val context = LocalContext.current
 
-    BackHandler(enabled = true) {
-        val welcome = Intent(context, WelcomeActivity::class.java).apply {
 
-        }
+    val coroutineScope = rememberCoroutineScope()
+
+    BackHandler(enabled = true) {
+        val welcome = Intent(context, WelcomeActivity::class.java)
         context.startActivity(welcome)
     }
 
@@ -58,7 +61,6 @@ fun LoginScreen(viewModel: LoginViewModel) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Título "TutorApp" alineado arriba a la izquierda
         Text(
             text = "TutorApp",
             fontSize = 20.sp,
@@ -69,7 +71,6 @@ fun LoginScreen(viewModel: LoginViewModel) {
 
         Spacer(modifier = Modifier.height(150.dp))
 
-        // Texto de bienvenida
         Text(
             text = "Login here",
             style= Typography.titleLarge
@@ -82,7 +83,6 @@ fun LoginScreen(viewModel: LoginViewModel) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Campo de Email
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -93,7 +93,6 @@ fun LoginScreen(viewModel: LoginViewModel) {
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Campo de Contraseña
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -105,34 +104,50 @@ fun LoginScreen(viewModel: LoginViewModel) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Botón de Login
         Button(
             onClick = {
-                viewModel.login(email, password) { success, message ->
-                    if (success) {
-                        Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
-                        Session.userid = message?.id
-                        Session.role = message?.role
-                        if (message?.role == "tutor") {
-                            val intent = Intent(context, TutorProfileActivity::class.java).apply {
-                                putExtra("TOKEN_KEY", message)
+                if (email.isBlank() || password.isBlank()) {
+                    Toast.makeText(context, "Please enter both email and password", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                if(NetworkUtils.isConnected(context)) {
+
+                    viewModel.login(email, password) { success, message ->
+                        if (success) {
+                            Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
+                            Session.userid = message?.id
+                            Session.role = message?.role
+
+                            if (message?.role == "tutor") {
+                                val intent =
+                                    Intent(context, TutorProfileActivity::class.java).apply {
+                                        putExtra("TOKEN_KEY", message)
+                                    }
+                                context.startActivity(intent)
+                            } else {
+                                val tokenAsString = Gson().toJson(message)
+                                val intent = Intent(context, ShowTutorsActivity::class.java).apply {
+                                    putExtra("TOKEN_KEY", tokenAsString)
+                                }
+                                context.startActivity(intent)
                             }
-                            context.startActivity(intent)
+
                         } else {
-                            val tokenAsString = Gson().toJson(message)
-                            val intent = Intent(context, ShowTutorsActivity::class.java).apply {
-                                putExtra("TOKEN_KEY", tokenAsString)
-                            }
-                            context.startActivity(intent)
+                            val error = message?.error
+                            Toast.makeText(context, "Login Failed: $error", Toast.LENGTH_SHORT)
+                                .show()
                         }
+                    }
+                }
+                else{
 
-                    } else {
-                        val error = message?.error
+                    coroutineScope.launch {
 
-                        Toast.makeText(context, "Login Failed: $error", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "No internet connection, try later", Toast.LENGTH_SHORT).show()
                     }
                 }
             },
+            enabled = email.isNotBlank() && password.isNotBlank(),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)),
             shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
             modifier = Modifier.fillMaxWidth(0.5f)
@@ -141,4 +156,6 @@ fun LoginScreen(viewModel: LoginViewModel) {
         }
     }
 }
+
+
 
