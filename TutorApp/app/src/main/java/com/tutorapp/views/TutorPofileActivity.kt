@@ -178,7 +178,7 @@ fun TutorProfileHeader(modifier: Modifier) {
                     modifier = Modifier
                         .size(25.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF1A2546))
+                        .background(Color(0xFF192650))
                 ) {
                     Icon(
                         imageVector = Icons.Default.Notifications,
@@ -197,7 +197,7 @@ fun TutorProfileHeader(modifier: Modifier) {
                     modifier = Modifier
                         .size(25.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF1A2546))
+                        .background(Color(0xFF192650))
                 ) {
                     Icon(
                         imageVector = Icons.Default.Logout,
@@ -227,7 +227,7 @@ fun TutorProfileScreen(
         modifier = Modifier
             .size(100.dp)
             .clip(CircleShape)
-            .background(Color(0xFF1A2546)),
+            .background(Color(0xFF192650)),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -246,23 +246,23 @@ fun TutorProfileScreen(
     Row {
         val r = tutorProfileInfo.data.ratings.toInt().coerceIn(0,5)
         repeat(r) {
-            Icon(Icons.Default.Favorite, contentDescription = null, tint = Color(0xFF1A2546))
+            Icon(Icons.Default.Favorite, contentDescription = null, tint = Color(0xFF192650))
         }
         repeat(5 - r) {
-            Icon(Icons.Default.FavoriteBorder, contentDescription = null, tint = Color(0xFF1A2546))
+            Icon(Icons.Default.FavoriteBorder, contentDescription = null, tint = Color(0xFF192650))
         }
     }
     Spacer(modifier = Modifier.height(16.dp))
 
     // Contact & Specialty
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.Call, contentDescription = null, tint = Color(0xFF1A2546))
+        Icon(Icons.Default.Call, contentDescription = null, tint = Color(0xFF192650))
         Spacer(modifier = Modifier.width(8.dp))
         Text(text = tutorProfileInfo.data.whatsappContact, fontSize = 16.sp)
     }
     Spacer(modifier = Modifier.height(16.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.Create, contentDescription = null, tint = Color(0xFF1A2546))
+        Icon(Icons.Default.Create, contentDescription = null, tint = Color(0xFF192650))
         Spacer(modifier = Modifier.width(8.dp))
         Text(text = tutorProfileInfo.data.subjects, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
@@ -294,7 +294,7 @@ fun TutorProfileScreen(
         Button(
             onClick = { /* announce logic */ },
             shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF192650))
         ) {
             Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
             Spacer(modifier = Modifier.width(8.dp))
@@ -320,10 +320,10 @@ fun TutorReviewItem(review: Review) {
         Column {
             Row {
                 repeat(review.rating) {
-                    Icon(Icons.Default.Favorite, contentDescription = null, tint = Color(0xFF1A2546))
+                    Icon(Icons.Default.Favorite, contentDescription = null, tint = Color(0xFF192650))
                 }
                 repeat(5 - review.rating) {
-                    Icon(Icons.Default.FavoriteBorder, contentDescription = null, tint = Color(0xFF1A2546))
+                    Icon(Icons.Default.FavoriteBorder, contentDescription = null, tint = Color(0xFF192650))
                 }
             }
             Text(text = review.comment)
