@@ -64,8 +64,10 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import android.content.Context
 import androidx.activity.compose.BackHandler
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import com.google.android.gms.location.LocationServices
-
+import kotlinx.coroutines.CoroutineScope
 
 
 class ShowTutorsActivity: ComponentActivity(){
@@ -102,8 +104,22 @@ class ShowTutorsActivity: ComponentActivity(){
                 Log.i("mitag", "tiempo iniciado")
                 setContent{
                     TutorAppTheme {
-                        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                            ShowTutorsScreen(Modifier.padding(innerPadding), showTutorsViewModel,token, universities, coursesByUniversity, tutorsByCourse)
+                        val snackbarHostState = remember {SnackbarHostState()}
+                        val scope = rememberCoroutineScope()
+                        Scaffold(
+                            modifier = Modifier.fillMaxSize(),
+                            snackbarHost = {SnackbarHost(hostState = snackbarHostState)}
+                        ) { innerPadding ->
+                            ShowTutorsScreen(
+                                Modifier.padding(innerPadding),
+                                showTutorsViewModel,
+                                token,
+                                universities,
+                                coursesByUniversity,
+                                tutorsByCourse,
+                                scope = scope,
+                                snackbarHostState = snackbarHostState
+                            )
 
                         }
                     }
@@ -111,8 +127,22 @@ class ShowTutorsActivity: ComponentActivity(){
             }else {
                 setContent{
                     TutorAppTheme {
-                        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                            ShowTutorsScreen(Modifier.padding(innerPadding), showTutorsViewModel,token, emptyList(), emptyMap(), emptyMap())
+                        val snackbarHostState = remember {SnackbarHostState()}
+                        val scope = rememberCoroutineScope()
+                        Scaffold(
+                            modifier = Modifier.fillMaxSize(),
+                            snackbarHost = {SnackbarHost(hostState = snackbarHostState)}
+                            ) { innerPadding ->
+                            ShowTutorsScreen(
+                                Modifier.padding(innerPadding),
+                                showTutorsViewModel,
+                                token,
+                                emptyList(),
+                                emptyMap(),
+                                emptyMap(),
+                                scope = scope,
+                                snackbarHostState = snackbarHostState
+                            )
 
                         }
                     }
@@ -125,7 +155,7 @@ class ShowTutorsActivity: ComponentActivity(){
 }
 @Composable
 fun ShowTutorsScreen(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel, token: String, universities: List<UniversitySimple>,
-                     coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?){
+                     coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?, scope: CoroutineScope, snackbarHostState: SnackbarHostState){
     BackHandler(enabled = true) {
 
     }
@@ -133,7 +163,7 @@ fun ShowTutorsScreen(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMode
         TutorScreenHeader(modifier = Modifier.height(IntrinsicSize.Min),token)
         Spacer(modifier = Modifier.height(20.dp))
         FilterResultsButton(modifier = Modifier, showTutorsViewModel, universities, coursesByUniversity, tutorsByCourse)
-        ListOfTutorCards(modifier = modifier, showTutorsViewModel, token)
+        ListOfTutorCards(modifier = modifier, showTutorsViewModel, token, scope, snackbarHostState)
     }
 
 }
@@ -250,7 +280,7 @@ fun FilterResultsButton(modifier: Modifier, showTutorsViewModel: ShowTutorsViewM
 }
 
 @Composable
-fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel, token: String){
+fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel, token: String, scope: CoroutineScope, snackbarHostState: SnackbarHostState){
 
     val sessions = showTutorsViewModel.sessions
     val emptyFilter = showTutorsViewModel.emptyFilter
@@ -264,7 +294,7 @@ fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMode
             .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)){
             sessions.forEach {
-                    tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel)
+                    tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel, scope=scope, snackbarHostState = snackbarHostState)
             }
         }
     }
@@ -275,7 +305,7 @@ fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMode
             .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)){
             sessions.forEach {
-                    tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel)
+                    tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel, scope=scope, snackbarHostState = snackbarHostState)
             }
         }
     }
@@ -286,7 +316,7 @@ fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMode
 
 
 @Composable
-fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: String, showTutorsViewModel: ShowTutorsViewModel) {
+fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: String, showTutorsViewModel: ShowTutorsViewModel, scope: CoroutineScope, snackbarHostState: SnackbarHostState) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
@@ -358,18 +388,33 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: Strin
         // Button
         Button(
             onClick = {
-                showTutorsViewModel.bookingTime()
-                val prefs = context.getSharedPreferences("timeToBookPrefs", Context.MODE_PRIVATE)
-                val startTime = prefs.getLong("timeToBookStart", 0L)
-                if (startTime != 0L) {
-                    val timeToBook = System.currentTimeMillis() - startTime
-                    showTutorsViewModel.postTimeToBook(timeToBook.toFloat(), tutoringSession.tutor_id.toInt())
-                    prefs.edit().remove("timeToBookStart").apply()
-                }
+                if(showTutorsViewModel.isNetworkAvailable()){
+                    showTutorsViewModel.bookingTime()
+                    val prefs = context.getSharedPreferences("timeToBookPrefs", Context.MODE_PRIVATE)
+                    val startTime = prefs.getLong("timeToBookStart", 0L)
+                    if (startTime != 0L) {
+                        val timeToBook = System.currentTimeMillis() - startTime
+                        showTutorsViewModel.postTimeToBook(timeToBook.toFloat(), tutoringSession.tutor_id.toInt())
+                        prefs.edit().remove("timeToBookStart").apply()
+                    }
 
-                val url = "https://wa.me/57"+tutoringSession.tutor_phone_number
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                context.startActivity(intent)
+                    val url = "https://wa.me/57"+tutoringSession.tutor_phone_number
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+
+                    try {
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        // Opcional: Manejar excepción si no hay app para abrir el link
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Could not open link.")
+                        }
+                        Log.e("TutorCard", "Error opening WhatsApp link", e)
+                    }
+                }else{
+                    scope.launch {
+                        snackbarHostState.showSnackbar("No internet connection") // Mensaje en inglés
+                    }
+                }
             },
             modifier = Modifier.align(Alignment.End),
             shape = RoundedCornerShape(50),

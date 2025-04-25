@@ -278,7 +278,7 @@ class ShowTutorsViewModel(application: Application) : AndroidViewModel(applicati
         return tutorCardCache[sessionId]
     }
 
-    private fun isNetworkAvailable(): Boolean {
+    fun isNetworkAvailable(): Boolean {
         // Implementación de la verificación de red (como la que tenías antes)
         val connectivityManager = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val network = connectivityManager.activeNetwork
