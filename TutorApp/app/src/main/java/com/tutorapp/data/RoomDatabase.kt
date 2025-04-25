@@ -6,12 +6,19 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [StudentFormEntity::class, TutorFormEntity::class],
+    entities = [
+        StudentFormEntity::class,
+        TutorFormEntity::class,
+        TutorProfileEntity::class,
+        ReviewEntity::class,
+        InsightEntity::class
+    ],
     version = 1
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun studentFormDao(): StudentFormDao
-    abstract fun tutorFormDao(): TutorFormDao  // <<<<<< Agrega esto
+    abstract fun tutorFormDao(): TutorFormDao
+    abstract fun tutorProfileDao(): TutorProfileDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
