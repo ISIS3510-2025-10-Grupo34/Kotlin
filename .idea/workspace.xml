@@ -10,12 +10,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="202002ec-d4e2-48e8-8df7-0feb6b7f6706" name="Changes" comment="redirect to tutor profile if is tutor user">
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/data/RoomDatabase.kt" beforeDir="false" afterPath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/data/RoomDatabase.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/viewModels/WriteReviewViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/viewModels/WriteReviewViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/views/LoginActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/views/LoginActivity.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/views/WriteReviewActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/views/WriteReviewActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/remote/ApiService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/remote/ApiService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/viewModels/RegisterViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/viewModels/RegisterViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/views/RegisterActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/views/RegisterActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/views/WelcomeActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/TutorApp/app/src/main/java/com/tutorapp/views/WelcomeActivity.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -72,8 +72,9 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Kotlin Class" />
         <option value="Kotlin File" />
+        <option value="Class" />
+        <option value="Kotlin Class" />
       </list>
     </option>
   </component>
@@ -140,7 +141,7 @@
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "com.google.services.firebase.aqiPopupShown": "true",
-    "git-widget-placeholder": "feature/84",
+    "git-widget-placeholder": "feature/91",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "/Users/sergiofranco/AndroidStudioProjects/Kotlin/TutorApp/app/src/main/java/com/tutorapp/models",
     "project.structure.last.edited": "Project",

@@ -56,6 +56,9 @@ interface ApiService {
     @POST("time-to-book/")
     suspend fun postTimeToBook(@Body request: PostTimeToBookRequest): Response<PostTimeToBookResponse>
 
+    @POST("profile-creation-time/")
+    suspend fun postTimeTosSignUp(@Body request: PostTimeToSignUpRequest)
+
     @POST("tutor-profile-load-time/")
     suspend fun postTutorProfileLoadTime(@Body request: PostTutorProfileLoadTimeRequest): Response<PostTutorProfileLoadTimeResponse>
 
