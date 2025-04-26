@@ -11,14 +11,16 @@ import androidx.room.RoomDatabase
         TutorFormEntity::class,
         TutorProfileEntity::class,
         ReviewEntity::class,
-        InsightEntity::class
+        InsightEntity::class,
+        DraftReviewEntity::class,
     ],
-    version = 1
+    version = 2
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun studentFormDao(): StudentFormDao
     abstract fun tutorFormDao(): TutorFormDao
     abstract fun tutorProfileDao(): TutorProfileDao
+    abstract fun draftReviewDao(): DraftReviewDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -29,7 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "app_database"
-                ).build().also { INSTANCE = it }
+                ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
             }
         }
     }
