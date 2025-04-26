@@ -20,6 +20,9 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 import com.google.gson.Gson
+import com.tutorapp.data.AppDatabase
+import com.tutorapp.data.SessionDataEntity
+import com.tutorapp.data.StudentFormEntity
 import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.remote.NetworkUtils
 import com.tutorapp.ui.theme.Typography
@@ -119,6 +122,16 @@ fun LoginScreen(viewModel: LoginViewModel) {
                             Session.role = message?.role
 
                             if (message?.role == "tutor") {
+                                val db = AppDatabase.getDatabase(context)
+                                val dao = db.sessionDataDao()
+                                val tokenAsString = Gson().toJson(message)
+                                coroutineScope.launch {
+                                    dao.saveData(
+                                        SessionDataEntity(
+                                            token=tokenAsString
+                                        )
+                                    )
+                                }
                                 val intent =
                                     Intent(context, TutorProfileActivity::class.java).apply {
                                         putExtra("TOKEN_KEY", message)
@@ -126,6 +139,16 @@ fun LoginScreen(viewModel: LoginViewModel) {
                                 context.startActivity(intent)
                             } else {
                                 val tokenAsString = Gson().toJson(message)
+                                val db = AppDatabase.getDatabase(context)
+                                val dao = db.sessionDataDao()
+                                coroutineScope.launch {
+                                    dao.saveData(
+                                        SessionDataEntity(
+                                           token=tokenAsString
+                                        )
+                                    )
+                                }
+
                                 val intent = Intent(context, ShowTutorsActivity::class.java).apply {
                                     putExtra("TOKEN_KEY", tokenAsString)
                                 }

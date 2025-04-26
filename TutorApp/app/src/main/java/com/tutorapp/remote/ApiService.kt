@@ -23,6 +23,9 @@ interface ApiService {
     @GET("universities/")
     suspend fun universities(): Response<UniversitiesResponse>
 
+    @GET("get-area-of-expertise/")
+    suspend fun aoes(): Response<AoesResponse>
+
     @POST("majors/")
     suspend fun majors(@Body university: String): Response<MajorsResponse>
 

@@ -54,6 +54,7 @@ import com.tutorapp.data.StudentFormEntity
 import com.tutorapp.data.TutorFormEntity
 import com.tutorapp.remote.NetworkUtils
 import kotlinx.coroutines.launch
+import android.util.LruCache
 
 
 class RegisterActivity : ComponentActivity() {
@@ -65,6 +66,9 @@ class RegisterActivity : ComponentActivity() {
         }
     }
 }
+
+
+
 
 @Composable
 fun RegisterScreen(viewModel: RegisterViewModel) {
@@ -480,10 +484,12 @@ fun TutorRegisterScreen(
     var phoneNumberState by rememberSaveable { mutableStateOf(phoneNumber) }
 
     var expanded by remember { mutableStateOf(false) }
+    var expandedExpertise by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
 
     var showErrors by remember { mutableStateOf(false) }
     val universities by viewModel.universities.collectAsState()
+    val expertises by   viewModel.aoes.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     val coroutineScope = rememberCoroutineScope()
@@ -491,10 +497,16 @@ fun TutorRegisterScreen(
     LaunchedEffect(Unit) {
         if (NetworkUtils.isConnected(context)) {
             viewModel.universities()
+            viewModel.aoes()
         } else {
             if(universityState.isBlank()) {
                 coroutineScope.launch {
                     snackbarHostState.showSnackbar("No internet. Universities could not be loaded.")
+                }
+            }
+            if(expertiseState.isBlank()) {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("No internet. Expertises could not be loaded.")
                 }
             }
         }
@@ -601,13 +613,51 @@ fun TutorRegisterScreen(
                 }
             }
 
-            OutlinedTextField(
-                value = expertiseState,
-                onValueChange = { expertiseState = it },
-                label = { Text("Area of expertise") },
-                modifier = fieldModifier,
-                isError = showErrors && expertiseState.isBlank()
-            )
+
+
+            Box {
+                OutlinedTextField(
+                    value = expertiseState,
+                    onValueChange = {},
+                    label = { Text("Area of expertise") },
+                    modifier = fieldModifier,
+                    readOnly = true,
+                    isError = showErrors && expertiseState.isBlank(),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            if (NetworkUtils.isConnected(context)) {
+                                expandedExpertise = !expandedExpertise
+                            } else {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("You can't select an area of expertise without internet connection")
+                                }
+                            }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Dropdown"
+                            )
+                        }
+                    }
+                )
+
+                DropdownMenu(
+                    expanded = expandedExpertise,
+                    onDismissRequest = { expandedExpertise = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    expertises.forEach { expertise ->
+                        DropdownMenuItem(
+                            text = { Text(expertise) },
+                            onClick = {
+                                expertiseState = expertise
+                                expandedExpertise = false
+                            }
+                        )
+                    }
+                }
+            }
+
 
             OutlinedTextField(
                 value = emailState,

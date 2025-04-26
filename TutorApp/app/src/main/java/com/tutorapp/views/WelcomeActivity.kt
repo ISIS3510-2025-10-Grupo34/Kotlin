@@ -19,13 +19,27 @@ import androidx.activity.compose.setContent
 import android.os.Bundle
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import com.google.gson.Gson
+import com.tutorapp.data.AppDatabase
+import com.tutorapp.data.SessionDataEntity
+import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.ui.theme.TutorAppTheme
 import com.tutorapp.views.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+
 
 class WelcomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
+
         setContent {
             WelcomeScreen()
         }
@@ -33,6 +47,38 @@ class WelcomeActivity : ComponentActivity() {
 
     @Composable
     fun WelcomeScreen() {
+        val context = LocalContext.current
+        val coroutineScope = rememberCoroutineScope()
+
+        LaunchedEffect(Unit) {
+            val db = AppDatabase.getDatabase(context)
+            val session = withContext(Dispatchers.IO) {
+                db.sessionDataDao().loadData()
+            }
+
+            if (session != null && session.token.isNotBlank()) {
+                println("ppp")
+                val tokenFormatted = Gson().fromJson(session.token, LoginTokenDecoded::class.java)
+                Session.role = tokenFormatted.role
+                Session.userid = tokenFormatted.id
+                if (tokenFormatted.role == "tutor") {
+                    val intent =
+                        Intent(context, TutorProfileActivity::class.java).apply {
+                            putExtra("TOKEN_KEY", tokenFormatted)
+                        }
+                    context.startActivity(intent)
+                } else {
+                    val tokenAsString = Gson().toJson(tokenFormatted)
+                    val intent = Intent(context, ShowTutorsActivity::class.java).apply {
+                        putExtra("TOKEN_KEY", tokenAsString)
+                    }
+                    context.startActivity(intent)
+                }
+                if (context is ComponentActivity) {
+                    context.finish()
+                }
+            }
+        }
         BackHandler(enabled = true) {
 
         }

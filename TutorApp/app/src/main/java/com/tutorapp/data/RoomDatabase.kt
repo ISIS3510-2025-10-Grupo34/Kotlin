@@ -11,7 +11,8 @@ import androidx.room.RoomDatabase
         TutorFormEntity::class,
         TutorProfileEntity::class,
         ReviewEntity::class,
-        InsightEntity::class
+        InsightEntity::class,
+        SessionDataEntity::class
     ],
     version = 1
 )
@@ -19,6 +20,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun studentFormDao(): StudentFormDao
     abstract fun tutorFormDao(): TutorFormDao
     abstract fun tutorProfileDao(): TutorProfileDao
+    abstract fun sessionDataDao(): SessionDataDao
+
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
