@@ -16,7 +16,7 @@ import androidx.room.RoomDatabase
         DraftReviewEntity::class,
 
     ],
-    version = 2
+    version = 3
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun studentFormDao(): StudentFormDao

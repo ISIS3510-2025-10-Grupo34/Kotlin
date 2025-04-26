@@ -1055,6 +1055,13 @@ fun UploadIDScreen(
                     }
                     onRegisterFail("Please upload your university ID picture")
                 }
+                val prefs = context.getSharedPreferences("timeToSignUpPrefs", Context.MODE_PRIVATE)
+                val startTime = prefs.getLong("timeToSignUpStart", 0L)
+                if (startTime != 0L) {
+                    val timeToSignUp = System.currentTimeMillis() - startTime
+                    viewModel.postTimeToSignUp(timeToSignUp.toInt()/1000)
+                    prefs.edit().remove("timeToSignUpStart").apply()
+                }
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))
         ) {

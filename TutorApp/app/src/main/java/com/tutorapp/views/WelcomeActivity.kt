@@ -129,6 +129,9 @@ class WelcomeActivity : ComponentActivity() {
 
             Button(
                 onClick = {
+                    val timeToBookStartTime = System.currentTimeMillis()
+                    val prefs = getSharedPreferences("timeToSignUpPrefs", MODE_PRIVATE)
+                    prefs.edit().putLong("timeToSignUpStart", timeToBookStartTime).apply()
                     val intent = Intent(this@WelcomeActivity, RegisterActivity::class.java)
                     startActivity(intent)
                 },
