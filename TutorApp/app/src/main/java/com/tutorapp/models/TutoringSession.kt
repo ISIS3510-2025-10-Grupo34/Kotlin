@@ -1,6 +1,7 @@
 package com.tutorapp.models
 
 data class TutoringSession(
+    val id: Int,
     val tutor: String,
     val tutor_id: String,
     val tutor_phone_number: String,

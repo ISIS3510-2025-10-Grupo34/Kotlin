@@ -42,11 +42,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tutorapp.data.AppDatabase
 import com.tutorapp.models.GetTutoringSessionsToReviewResponse
 import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.models.TutoringSessionToReview
 import com.tutorapp.ui.theme.LightGrey
 import com.tutorapp.ui.theme.Primary
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 
@@ -75,6 +77,7 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
     val percentage by viewModel.percentage.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
         viewModel.reviewPercentage(studentId)
     }
@@ -135,7 +138,11 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
                     )
 
                     IconButton(
-                        onClick = { val intent = Intent(context, WelcomeActivity::class.java).apply {
+                        onClick = {
+                            val db = AppDatabase.getDatabase(context)
+                            val dao = db.sessionDataDao()
+                            coroutineScope.launch {dao.clearData()}
+                            val intent = Intent(context, WelcomeActivity::class.java).apply {
 
                         }
                             context.startActivity(intent)},

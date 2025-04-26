@@ -49,7 +49,12 @@ import java.io.File
 
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import com.tutorapp.data.AppDatabase
+import com.tutorapp.data.StudentFormEntity
+import com.tutorapp.data.TutorFormEntity
+import com.tutorapp.remote.NetworkUtils
 import kotlinx.coroutines.launch
+import android.util.LruCache
 
 
 class RegisterActivity : ComponentActivity() {
@@ -61,6 +66,9 @@ class RegisterActivity : ComponentActivity() {
         }
     }
 }
+
+
+
 
 @Composable
 fun RegisterScreen(viewModel: RegisterViewModel) {
@@ -165,10 +173,10 @@ fun StudentRegisterScreen(
     viewModel: RegisterViewModel,
     onDetailsEntered: (String, String, String, String, String) -> Unit
 ) {
-    LaunchedEffect(Unit) {
-        viewModel.universities()
+    val context = LocalContext.current
+    val db = AppDatabase.getDatabase(context)
+    val dao = db.studentFormDao()
 
-    }
 
     var nameState by rememberSaveable { mutableStateOf(name) }
     var universityState by rememberSaveable { mutableStateOf(university) }
@@ -192,6 +200,38 @@ fun StudentRegisterScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(Unit) {
+        if (NetworkUtils.isConnected(context)) {
+            viewModel.universities()
+        } else {
+            if(universityState.isBlank()) {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("No internet. Universities could not be loaded.")
+                }
+            }
+        }
+
+    }
+
+    LaunchedEffect(Unit) {
+        val form = dao.loadForm()
+        form?.let {
+            nameState = it.name
+            universityState = it.university
+            majorState = it.major
+            emailState = it.email
+            passwordState = it.password
+            if (NetworkUtils.isConnected(context)) {
+                viewModel.majors(universityState)
+            } else {
+                if(majorState.isBlank()){
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("No internet. Majors could not be loaded.")
+                }}
+            }
+
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -237,14 +277,24 @@ fun StudentRegisterScreen(
                     isError = universityError,
                     readOnly = true,
                     trailingIcon = {
-                        IconButton(onClick = { expanded2 = !expanded2 }) {
+                        IconButton(onClick = { if(NetworkUtils.isConnected(context)){
+                            expanded2 = !expanded2 }
+                        else{ coroutineScope.launch {
+                            snackbarHostState.showSnackbar("You can't select an unniversity since" +
+                                    " there isn't internet connection")
+                            }
+                        }
+                            }
+                        )
+
+                             {
                             Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
                         }
                     },
                     modifier = fieldModifier
                 )
 
-                DropdownMenu(expanded = expanded2, onDismissRequest = { expanded2 = false }) {
+                DropdownMenu(expanded = expanded2 && universities.isNotEmpty(), onDismissRequest = { expanded2 = false }) {
                     universities.forEach { university ->
                         DropdownMenuItem(
                             text = { Text(university) },
@@ -253,7 +303,10 @@ fun StudentRegisterScreen(
                                 universityError = false
                                 majorState = ""
                                 expanded2 = false
-                                viewModel.majors(university)
+                                if(NetworkUtils.isConnected(context)){
+                                    viewModel.majors(university)
+                                }
+
 
                             }
                         )
@@ -274,7 +327,15 @@ fun StudentRegisterScreen(
                                     snackbarHostState.showSnackbar("Please select a university first")
                                 }
                             } else {
-                                expanded = !expanded
+                                if(!NetworkUtils.isConnected(context)){
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("You can't select a major since" +
+                                                " there isn't internet connection")
+                                    }
+                                }
+                                else {
+                                    expanded = !expanded
+                                }
                             }
                         }) {
                             Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
@@ -283,7 +344,7 @@ fun StudentRegisterScreen(
                     modifier = fieldModifier
                 )
 
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                DropdownMenu(expanded = expanded && majors.isNotEmpty(), onDismissRequest = { expanded = false }) {
                     majors.forEach { major ->
                         DropdownMenuItem(
                             text = { Text(major) },
@@ -334,35 +395,54 @@ fun StudentRegisterScreen(
 
             Button(
                 onClick = {
-                    nameError = nameState.isBlank()
-                    universityError = universityState.isBlank()
-                    majorError = majorState.isBlank()
-                    emailError = emailState.isBlank() || !isValidEmail(emailState)
-                    passwordError = passwordState.isBlank()
+                    if(NetworkUtils.isConnected(context)) {
+                        nameError = nameState.isBlank()
+                        universityError = universityState.isBlank()
+                        majorError = majorState.isBlank()
+                        emailError = emailState.isBlank() || !isValidEmail(emailState)
+                        passwordError = passwordState.isBlank()
 
-                    if (nameError || universityError || majorError || emailError || passwordError) {
-                        coroutineScope.launch {
-                            val errorMsg = when {
-                                !isValidEmail(emailState) -> "Please enter a valid email"
-                                else -> "Please complete all fields"
+                        if (nameError || universityError || majorError || emailError || passwordError) {
+                            coroutineScope.launch {
+                                val errorMsg = when {
+                                    !isValidEmail(emailState) -> "Please enter a valid email"
+                                    else -> "Please complete all fields"
+                                }
+                                snackbarHostState.showSnackbar(errorMsg)
                             }
-                            snackbarHostState.showSnackbar(errorMsg)
-                        }
-                    } else {
-                        viewModel.email(emailState) { success, errorMessage ->
-                            if (success) {
-                                onDetailsEntered(
-                                    nameState,
-                                    universityState,
-                                    majorState,
-                                    emailState,
-                                    passwordState
-                                )
-                            } else {
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(errorMessage)
+                        } else {
+                            viewModel.email(emailState) { success, errorMessage ->
+                                if (success) {
+
+                                    onDetailsEntered(
+                                        nameState,
+                                        universityState,
+                                        majorState,
+                                        emailState,
+                                        passwordState
+                                    )
+                                } else {
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("Email already exists")
+                                    }
                                 }
                             }
+                        }
+                    }
+                    else{
+                        coroutineScope.launch {
+                            dao.saveForm(
+                                StudentFormEntity(
+                                    name = nameState,
+                                    university = universityState,
+                                    major = majorState,
+                                    email = emailState,
+                                    password = passwordState
+                                )
+                            )
+                        }
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("No internet. Form saved locally. You can continue later.")
                         }
                     }
                 },
@@ -391,6 +471,9 @@ fun TutorRegisterScreen(
     viewModel: RegisterViewModel,
     onDetailsEntered: (String, String, String, String, String, String) -> Unit
 ) {
+    val context = LocalContext.current
+    val db = AppDatabase.getDatabase(context)
+    val dao = db.tutorFormDao()
     val fieldModifier = Modifier.fillMaxWidth(0.9f)
 
     var nameState by rememberSaveable { mutableStateOf(name) }
@@ -401,14 +484,48 @@ fun TutorRegisterScreen(
     var phoneNumberState by rememberSaveable { mutableStateOf(phoneNumber) }
 
     var expanded by remember { mutableStateOf(false) }
+    var expandedExpertise by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
 
     var showErrors by remember { mutableStateOf(false) }
     val universities by viewModel.universities.collectAsState()
+    val expertises by   viewModel.aoes.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val coroutineScope = rememberCoroutineScope()
+
     LaunchedEffect(Unit) {
-        viewModel.universities()
+        if (NetworkUtils.isConnected(context)) {
+            viewModel.universities()
+            viewModel.aoes()
+        } else {
+            if(universityState.isBlank()) {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("No internet. Universities could not be loaded.")
+                }
+            }
+            if(expertiseState.isBlank()) {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("No internet. Expertises could not be loaded.")
+                }
+            }
+        }
+
+    }
+    LaunchedEffect(Unit) {
+        val form = dao.loadForm()
+        form?.let {
+            nameState = it.name
+            universityState = it.university
+            expertiseState = it.expertise
+            emailState = it.email
+            passwordState = it.password
+            phoneNumberState = it.phoneNumber
+
+
+
+
+        }
     }
 
     fun hasEmptyFields(): Boolean {
@@ -461,7 +578,16 @@ fun TutorRegisterScreen(
                     readOnly = true,
                     isError = showErrors && universityState.isBlank(),
                     trailingIcon = {
-                        IconButton(onClick = { expanded = !expanded }) {
+                        IconButton(onClick = {
+                            if(NetworkUtils.isConnected(context)){
+                            expanded = !expanded }
+                            else{
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("You can't select an unniversity since" +
+                                            " there isn't internet connection")
+                                }
+                            }
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.ArrowDropDown,
                                 contentDescription = "Dropdown"
@@ -487,13 +613,51 @@ fun TutorRegisterScreen(
                 }
             }
 
-            OutlinedTextField(
-                value = expertiseState,
-                onValueChange = { expertiseState = it },
-                label = { Text("Area of expertise") },
-                modifier = fieldModifier,
-                isError = showErrors && expertiseState.isBlank()
-            )
+
+
+            Box {
+                OutlinedTextField(
+                    value = expertiseState,
+                    onValueChange = {},
+                    label = { Text("Area of expertise") },
+                    modifier = fieldModifier,
+                    readOnly = true,
+                    isError = showErrors && expertiseState.isBlank(),
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            if (NetworkUtils.isConnected(context)) {
+                                expandedExpertise = !expandedExpertise
+                            } else {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("You can't select an area of expertise without internet connection")
+                                }
+                            }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Dropdown"
+                            )
+                        }
+                    }
+                )
+
+                DropdownMenu(
+                    expanded = expandedExpertise,
+                    onDismissRequest = { expandedExpertise = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    expertises.forEach { expertise ->
+                        DropdownMenuItem(
+                            text = { Text(expertise) },
+                            onClick = {
+                                expertiseState = expertise
+                                expandedExpertise = false
+                            }
+                        )
+                    }
+                }
+            }
+
 
             OutlinedTextField(
                 value = emailState,
@@ -543,27 +707,44 @@ fun TutorRegisterScreen(
                             snackbarHostState.showSnackbar("Please complete all fields")
                         }
                     } else {
-                        if(isValidEmail(emailState)) {
-                            viewModel.email(emailState) { success, errorMessage ->
-                                if (success) {
-                                    onDetailsEntered(
-                                        nameState,
-                                        universityState,
-                                        expertiseState,
-                                        emailState,
-                                        passwordState,
-                                        phoneNumberState
-                                    )
-                                } else {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar(errorMessage)
+                        if(NetworkUtils.isConnected(context)) {
+                            if (isValidEmail(emailState)) {
+                                viewModel.email(emailState) { success, errorMessage ->
+                                    if (success) {
+                                        onDetailsEntered(
+                                            nameState,
+                                            universityState,
+                                            expertiseState,
+                                            emailState,
+                                            passwordState,
+                                            phoneNumberState
+                                        )
+                                    } else {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Email already exists")
+                                        }
                                     }
                                 }
+                            } else {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("Please enter a valid email")
+                                }
                             }
-                        }
-                        else{
+                        } else{
                             coroutineScope.launch {
-                                snackbarHostState.showSnackbar("Please enter a valid email")
+                                dao.saveForm(
+                                    TutorFormEntity(
+                                        name = nameState,
+                                        university = universityState,
+                                        expertise = expertiseState,
+                                        email = emailState,
+                                        password = passwordState,
+                                        phoneNumber = phoneNumberState
+                                    )
+                                )
+                            }
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("No internet. Form saved locally. You can continue later.")
                             }
                         }
                     }
@@ -822,6 +1003,7 @@ fun UploadIDScreen(
         Button(
             onClick = {
                 if (idPictureUri != null) {
+                    if (NetworkUtils.isConnected(context)) {
                     viewModel.register(
                         name = name,
                         email = email,
@@ -839,12 +1021,32 @@ fun UploadIDScreen(
                     ) { success, message ->
                         if (success) {
                             val intent = Intent(context, LoginActivity::class.java)
+                            val db = AppDatabase.getDatabase(context)
+                            if(role=="student"){
+
+                                val dao = db.studentFormDao()
+                                coroutineScope.launch {dao.clearForm()}
+
+                            }
+                            else{
+                                val dao = db.tutorFormDao()
+                                coroutineScope.launch {dao.clearForm()}
+                            }
                             context.startActivity(intent)
                             Toast.makeText(context, "Register Successful", Toast.LENGTH_SHORT).show()
 
                         } else {
+                            if(NetworkUtils.isConnected(context)){
                             Toast.makeText(context, "Register Failed: $message", Toast.LENGTH_SHORT).show()
-                            onRegisterFail("")
+                            onRegisterFail("")}
+                            else{
+                                Toast.makeText(context, "Register Failed: You lost connection. Try later", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                    } else{
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("No internet connection please try later")
                         }
                     }
                 } else {
@@ -852,6 +1054,13 @@ fun UploadIDScreen(
                         snackbarHostState.showSnackbar("Please upload your university ID picture")
                     }
                     onRegisterFail("Please upload your university ID picture")
+                }
+                val prefs = context.getSharedPreferences("timeToSignUpPrefs", Context.MODE_PRIVATE)
+                val startTime = prefs.getLong("timeToSignUpStart", 0L)
+                if (startTime != 0L) {
+                    val timeToSignUp = System.currentTimeMillis() - startTime
+                    viewModel.postTimeToSignUp(timeToSignUp.toInt()/1000)
+                    prefs.edit().remove("timeToSignUpStart").apply()
                 }
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))

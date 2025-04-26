@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tutorapp.models.PostTimeToSignUpRequest
 import com.tutorapp.remote.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,10 +16,13 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
+import android.util.Log
 
 class RegisterViewModel : ViewModel() {
     private val _universities = MutableStateFlow<List<String>>(emptyList())
     val universities: StateFlow<List<String>> = _universities
+    private val _aoes = MutableStateFlow<List<String>>(emptyList())
+    val aoes: StateFlow<List<String>> = _aoes
     private val _majors = MutableStateFlow<List<String>>(emptyList())
     val majors: StateFlow<List<String>> = _majors
     fun register(
@@ -91,6 +95,15 @@ class RegisterViewModel : ViewModel() {
         }
 
     }
+    fun aoes(){
+        viewModelScope.launch {
+            val response = RetrofitClient.instance.aoes()
+            println(response.body())
+            response.body()?.let { _aoes.value=it.data }
+
+        }
+
+    }
     fun majors(university: String){
         viewModelScope.launch {
             val response = RetrofitClient.instance.majors(university)
@@ -110,6 +123,20 @@ class RegisterViewModel : ViewModel() {
             } else {
                 val errorMessage = response.errorBody()?.string() ?: "Registration failed"
                 onResult(false, errorMessage)
+            }
+        }
+    }
+
+    fun postTimeToSignUp(time: Int) {
+        viewModelScope.launch {
+            try {
+                val body = PostTimeToSignUpRequest(
+                    time_in_seconds = time
+                )
+                RetrofitClient.instance.postTimeTosSignUp(body)
+                Log.i("analytics", "time to sign up in seconds: $time")
+            } catch (e: Exception) {
+                Log.i("error", e.message ?: "unknown error")
             }
         }
     }
