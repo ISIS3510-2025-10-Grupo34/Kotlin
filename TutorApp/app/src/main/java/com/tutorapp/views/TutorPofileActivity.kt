@@ -43,7 +43,9 @@ import android.os.*
 import android.util.Log
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import com.tutorapp.data.AppDatabase
 import com.tutorapp.data.TutorProfileViewModelFactory
+import kotlinx.coroutines.launch
 
 class TutorProfileActivity : ComponentActivity() {
     private lateinit var connectivityManager: ConnectivityManager
@@ -150,6 +152,7 @@ fun TutorProfileContent(
 @Composable
 fun TutorProfileHeader(modifier: Modifier) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     Row(
         modifier = modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -188,6 +191,9 @@ fun TutorProfileHeader(modifier: Modifier) {
                 }
                 IconButton(
                     onClick = {
+                        val db = AppDatabase.getDatabase(context)
+                        val dao = db.sessionDataDao()
+                        coroutineScope.launch {dao.clearData()}
                         val intent = Intent(
                             context,
                             WelcomeActivity::class.java

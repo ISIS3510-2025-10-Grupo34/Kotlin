@@ -19,6 +19,8 @@ import java.io.File
 class RegisterViewModel : ViewModel() {
     private val _universities = MutableStateFlow<List<String>>(emptyList())
     val universities: StateFlow<List<String>> = _universities
+    private val _aoes = MutableStateFlow<List<String>>(emptyList())
+    val aoes: StateFlow<List<String>> = _aoes
     private val _majors = MutableStateFlow<List<String>>(emptyList())
     val majors: StateFlow<List<String>> = _majors
     fun register(
@@ -87,6 +89,15 @@ class RegisterViewModel : ViewModel() {
             println(response.body())
             println("bbb")
             response.body()?.let { _universities.value=it.universities }
+
+        }
+
+    }
+    fun aoes(){
+        viewModelScope.launch {
+            val response = RetrofitClient.instance.aoes()
+            println(response.body())
+            response.body()?.let { _aoes.value=it.data }
 
         }
 
