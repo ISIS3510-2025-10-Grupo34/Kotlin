@@ -66,8 +66,20 @@ import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.CoroutineScope
+import androidx.compose.runtime.DisposableEffect // <-- Importar
+import androidx.compose.runtime.LaunchedEffect // <-- Importar
+import androidx.compose.runtime.mutableStateOf // <-- Importar
+import androidx.compose.runtime.remember // <-- Importar
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue // <-- Importar
+import androidx.compose.runtime.getValue // <-- Importar
+import androidx.compose.ui.platform.LocalContext // <-- Importar
+import android.net.ConnectivityManager // <-- Importar
+import android.net.Network // <-- Importar
+import android.net.NetworkCapabilities // <-- Importar
+import android.net.NetworkRequest // <-- Importar
+import androidx.compose.material3.SnackbarDuration
 
 
 class ShowTutorsActivity: ComponentActivity(){
@@ -76,7 +88,7 @@ class ShowTutorsActivity: ComponentActivity(){
         super.onCreate(savedInstanceState)
         val token = intent.getStringExtra("TOKEN_KEY") ?: ""
 
-        showTutorsViewModel.loadInitialSessions()
+        //showTutorsViewModel.loadInitialSessions()
 
         showTutorsViewModel.getSearchResults(){ sucess, data ->
             if(sucess){
@@ -106,6 +118,61 @@ class ShowTutorsActivity: ComponentActivity(){
                     TutorAppTheme {
                         val snackbarHostState = remember {SnackbarHostState()}
                         val scope = rememberCoroutineScope()
+                        val context = LocalContext.current
+                        val viewModel = showTutorsViewModel
+
+                        val isOffline = remember{
+                            mutableStateOf(!viewModel.isNetworkAvailable())
+                        }
+
+                        DisposableEffect(Unit){
+                            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                            val networkCallback = object: ConnectivityManager.NetworkCallback(){
+                                override fun onAvailable(network: Network){
+                                    super.onAvailable(network)
+                                    isOffline.value = false
+                                }
+                                override fun onLost(network:Network){
+                                    super.onLost(network)
+                                    isOffline.value = true
+                                }
+                                override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                                    super.onCapabilitiesChanged(network, networkCapabilities)
+                                    val hasInternet = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                                            networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                                    isOffline.value = !hasInternet
+
+                                }
+                            }
+
+                            val networkRequest = NetworkRequest.Builder()
+                                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                                .build()
+                            connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
+
+                            onDispose {
+                                connectivityManager.unregisterNetworkCallback(networkCallback)
+                            }
+                        }
+                        LaunchedEffect(isOffline.value) {
+                            if (isOffline.value) {
+                                scope.launch {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    snackbarHostState.showSnackbar(
+                                        message = "No internet connection. Sessions shown may differ from those in real time.",
+                                        duration = SnackbarDuration.Indefinite
+                                    )
+                                }
+                            } else {
+                                snackbarHostState.currentSnackbarData?.let {
+                                    if(it.visuals.message == "No internet connection. Sessions shown may differ from those in real time.") {
+                                        it.dismiss()
+                                    }
+                                }
+                            }
+                        }
+
+
                         Scaffold(
                             modifier = Modifier.fillMaxSize(),
                             snackbarHost = {SnackbarHost(hostState = snackbarHostState)}
@@ -129,6 +196,59 @@ class ShowTutorsActivity: ComponentActivity(){
                     TutorAppTheme {
                         val snackbarHostState = remember {SnackbarHostState()}
                         val scope = rememberCoroutineScope()
+                        val context = LocalContext.current
+                        val viewModel = showTutorsViewModel
+
+                        val isOffline = remember{
+                            mutableStateOf(!viewModel.isNetworkAvailable())
+                        }
+
+                        DisposableEffect(Unit){
+                            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                            val networkCallback = object: ConnectivityManager.NetworkCallback(){
+                                override fun onAvailable(network: Network){
+                                    super.onAvailable(network)
+                                    isOffline.value = false
+                                }
+                                override fun onLost(network:Network){
+                                    super.onLost(network)
+                                    isOffline.value = true
+                                }
+                                override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                                    super.onCapabilitiesChanged(network, networkCapabilities)
+                                    val hasInternet = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                                            networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                                    isOffline.value = !hasInternet
+                                }
+                            }
+
+                            val networkRequest = NetworkRequest.Builder()
+                                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                                .build()
+                            connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
+
+                            onDispose {
+                                connectivityManager.unregisterNetworkCallback(networkCallback)
+                            }
+                        }
+                        LaunchedEffect(isOffline.value) {
+                            if (isOffline.value) {
+                                scope.launch {
+                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                    snackbarHostState.showSnackbar(
+                                        message = "No internet connection. Sessions shown may differ from those in real time.",
+                                        duration = SnackbarDuration.Indefinite
+                                    )
+                                }
+                            } else {
+                                snackbarHostState.currentSnackbarData?.let {
+                                    // Comprueba si el mensaje es el de offline antes de descartar
+                                    if(it.visuals.message == "No internet connection. Sessions shown may differ from those in real time.") {
+                                        it.dismiss()
+                                    }
+                                }
+                            }
+                        }
                         Scaffold(
                             modifier = Modifier.fillMaxSize(),
                             snackbarHost = {SnackbarHost(hostState = snackbarHostState)}
@@ -411,9 +531,9 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: Strin
                         Log.e("TutorCard", "Error opening WhatsApp link", e)
                     }
                 }else{
-                    scope.launch {
+                    /*scope.launch {
                         snackbarHostState.showSnackbar("No internet connection") // Mensaje en inglés
-                    }
+                    }*/
                 }
             },
             modifier = Modifier.align(Alignment.End),
