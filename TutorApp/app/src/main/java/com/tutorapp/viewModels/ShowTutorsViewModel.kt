@@ -36,38 +36,43 @@ class ShowTutorsViewModel(application: Application) : AndroidViewModel(applicati
         private set
 
     var emptyFilter by mutableStateOf(false)
+    var isLoading by mutableStateOf(false)
 
     init {
         _cachedSessions.value = tutorCardCache.values.toList()
         sessions = tutorCardCache.values.toList()
+        loadInitialSessions()
     }
 
     fun loadInitialSessions() {
         viewModelScope.launch {
-
-            _cachedSessions.value = tutorCardCache.values.toList()
-            sessions = tutorCardCache.values.toList()
-
+            isLoading = true
             if (isNetworkAvailable()) {
                 try {
                     val response = RetrofitClient.instance.tutoringSessions()
                     if (response.isSuccessful) {
                         val fetchedSessions = response.body()?.filter { it.student == null } ?: emptyList()
+                        sessions = fetchedSessions
                         tutorCardCache.clear()
                         fetchedSessions.forEach { session ->
                             tutorCardCache[session.id] = session
                         }
                         _cachedSessions.value = tutorCardCache.values.toList()
-                        sessions = tutorCardCache.values.toList()
+                        Log.i("ViewModel", "Online: Loaded ${fetchedSessions.size} sessions. Cache updated with ${tutorCardCache.size} items.")
                     } else {
-                        println("Error al cargar sesiones iniciales: ${response.code()}")
+                        Log.i("ViewModel","Error al cargar sesiones iniciales: ${response.code()}")
+                        sessions = tutorCardCache.values.toList()
                     }
                 } catch (e: Exception) {
                     println("Excepción al cargar sesiones iniciales: ${e.message}")
+                    sessions = tutorCardCache.values.toList()
                 }
             } else {
                 Log.i("Network", "No hay conexión a internet al cargar las sesiones iniciales. Se mostrará la caché.")
+                val cachedData = tutorCardCache.values.toList()
+                sessions = cachedData
             }
+            isLoading = false
         }
     }
 
