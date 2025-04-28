@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
+
 @Database(
     entities = [
         StudentFormEntity::class,
@@ -14,9 +15,10 @@ import androidx.room.RoomDatabase
         InsightEntity::class,
         SessionDataEntity::class,
         DraftReviewEntity::class,
+        TutoringSessionEntity::class,
 
     ],
-    version = 3
+    version = 4
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun studentFormDao(): StudentFormDao
@@ -24,6 +26,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tutorProfileDao(): TutorProfileDao
     abstract fun sessionDataDao(): SessionDataDao
     abstract fun draftReviewDao(): DraftReviewDao
+    abstract fun tutoringSessionDao(): TutoringSessionDao
 
 
     companion object {
