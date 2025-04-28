@@ -6,6 +6,7 @@ import com.tutorapp.models.StudentProfileRequest
 import com.tutorapp.remote.RetrofitClient
 import kotlinx.coroutines.launch
 import android.util.Base64
+import androidx.compose.ui.platform.LocalContext
 import com.tutorapp.models.GetTutorProfileResponse
 import com.tutorapp.models.GetTutoringSessionsToReviewResponse
 import com.tutorapp.models.StudentProfileResponse
@@ -44,6 +45,7 @@ class StudentProfileViewModel : ViewModel() {
 
     fun getTutoringSessionsToReview(studentId: Int, onResult: (Boolean, GetTutoringSessionsToReviewResponse?) -> Unit) {
         viewModelScope.launch {
+
             try {
                 val response = RetrofitClient.instance.getTutoringSessionsToReview(studentId)
                 if (response.isSuccessful) {

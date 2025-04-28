@@ -43,9 +43,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tutorapp.data.AppDatabase
+import com.tutorapp.data.Converters
+import com.tutorapp.data.StudentProfileEntity
 import com.tutorapp.models.GetTutoringSessionsToReviewResponse
 import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.models.TutoringSessionToReview
+import com.tutorapp.models.dataSP
+import com.tutorapp.remote.NetworkUtils
 import com.tutorapp.ui.theme.LightGrey
 import com.tutorapp.ui.theme.Primary
 import kotlinx.coroutines.launch
@@ -53,84 +57,160 @@ import org.json.JSONObject
 import java.io.ByteArrayInputStream
 
 
+
 class StudentProfileActivity : ComponentActivity() {
     private val studentProfileViewModel: StudentProfileViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val context = this
+
 
         val studentId = intent.getStringExtra("ID") ?: return
-        studentProfileViewModel.getTutoringSessionsToReview(studentId.toInt()) { success, data ->
-            if (success) {
-                setContent {
-                    if (data != null) {
-                        StudentProfileScreen(studentProfileViewModel, studentId, data)
+        if(NetworkUtils.isConnected(context)) {
+            studentProfileViewModel.getTutoringSessionsToReview(studentId.toInt()) { success, data ->
+                if (success) {
+                    setContent {
+                        if (data != null) {
+                            StudentProfileScreen(studentProfileViewModel, studentId, data)
+                        }
+                    }
+                } else {
+                    setContent {
+                        StudentProfileScreen(studentProfileViewModel, studentId, null)
                     }
                 }
+            }
+        }
+        else{
+            setContent {
+                StudentProfileScreen(studentProfileViewModel, studentId, null)
             }
         }
     }
 }
 
 @Composable
-fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, tutoringSessionsToReview: GetTutoringSessionsToReviewResponse) {
+fun StudentProfileScreen(
+    viewModel: StudentProfileViewModel,
+    studentId: String,
+    tutoringSessionsToReview: GetTutoringSessionsToReviewResponse?
+) {
     var isLoading by remember { mutableStateOf(true) }
     val percentage by viewModel.percentage.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+
+    // Inicializar la base de datos y DAO
+    val db = AppDatabase.getDatabase(context)
+    val studentProfileDao = db.studentProfileDao()
+
+    // Estado local para cargar perfil offline
+    var localProfile by remember { mutableStateOf<StudentProfileEntity?>(null) }
+
+    // Cargar porcentaje de reseñas
     LaunchedEffect(Unit) {
-        viewModel.reviewPercentage(studentId)
+        if(NetworkUtils.isConnected(context)){
+        viewModel.reviewPercentage(studentId)}
     }
+
+    // Cargar perfil (online o local)
+    val hasConnection = NetworkUtils.isConnected(context)
+    if (hasConnection) {
     LaunchedEffect(studentId) {
+
         viewModel.studentProfile(studentId) {
             isLoading = false
+            viewModel.studentProfile?.let { profile ->
+                val entity = StudentProfileEntity(
+                    name = profile.name,
+                    university = profile.university,
+                    major = profile.major,
+                    learningStyles = Converters.fromStringList(profile.learning_styles)
+                )
+                println(entity)
+                coroutineScope.launch {
+                    println(entity.toString()+"jmmm")
+                    studentProfileDao.saveData(entity)
+                }
+            }
         }
+
+        // Guardar en Room si existe perfil
+
     }
+
+    }
+        else {
+            // Cargar de Room si no hay conexión
+            LaunchedEffect(Unit) {
+                println("ddd")
+                localProfile = studentProfileDao.loadData()
+                println(localProfile.toString()+"acaaa")
+                isLoading = false
+            }
+        }
+
+    // Lanzar alerta si porcentaje es bajo
     LaunchedEffect(percentage) {
-        println(percentage)
-        println(percentage<50)
-        if (percentage<50) {
+        if (percentage < 50) {
             showDialog = true
         }
     }
 
-
     if (isLoading) {
         CircularProgressIndicator()
     } else {
-        println("dd $showDialog")
         if (showDialog) {
             AlertDialog(
-                onDismissRequest = {
-                    // Evita que se cierre al tocar fuera del diálogo
-                    // No hacemos nada aquí para forzar al usuario a usar el botón
-                },
-                title = {
-                    Text(text = "Help tutorapp improve!")
-                },
+                onDismissRequest = { /* Forzar usar el botón */ },
+                title = { Text(text = "Help tutorapp improve!") },
                 text = {
-                    Text("We notice you've only reviewed $percentage% of your booked tutorings, " +
-                            "try to review more")
+                    Text(
+                        "We notice you've only reviewed $percentage% of your booked tutorings, " +
+                                "try to review more"
+                    )
                 },
                 confirmButton = {
-                    Button(onClick = { showDialog = false },
-                        colors = ButtonColors(containerColor = Color(0xFF192650), contentColor = Color.White, disabledContentColor = Color.White, disabledContainerColor = Color(0xFF192650) )) {
+                    Button(
+                        onClick = { showDialog = false },
+                        colors = ButtonColors(
+                            containerColor = Color(0xFF192650),
+                            contentColor = Color.White,
+                            disabledContentColor = Color.White,
+                            disabledContainerColor = Color(0xFF192650)
+                        )
+                    ) {
                         Text("Ok")
                     }
                 }
             )
         }
-        viewModel.studentProfile?.let { profile ->
+        fun StudentProfileEntity.toStudentProfile(): dataSP {
+            return dataSP(
+                profile_picture = null, // no guardamos foto local
+                name = this.name,
+                university = this.university,
+                major = this.major,
+                learning_styles = Converters.toStringList(this.learningStyles)
+            )
+        }
+
+        println("vvv")
+        // Elegir perfil: online o local
+        val profile = viewModel.studentProfile ?: localProfile?.toStudentProfile()
+        println(profile)
+        profile?.let { profileData ->
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-
-                Row( modifier = Modifier
-                    .fillMaxWidth(),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically){
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = "TutorApp",
                         fontSize = 20.sp,
@@ -139,13 +219,12 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
 
                     IconButton(
                         onClick = {
-                            val db = AppDatabase.getDatabase(context)
                             val dao = db.sessionDataDao()
-                            coroutineScope.launch {dao.clearData()}
-                            val intent = Intent(context, WelcomeActivity::class.java).apply {
-
-                        }
-                            context.startActivity(intent)},
+                            coroutineScope.launch { dao.clearData()
+                            studentProfileDao.clearData()}
+                            val intent = Intent(context, WelcomeActivity::class.java)
+                            context.startActivity(intent)
+                        },
                         modifier = Modifier
                             .size(40.dp)
                             .background(Primary, CircleShape)
@@ -160,13 +239,12 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (profile.profile_picture.isNullOrEmpty()) {
-                        val initial = profile.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+                    if (profileData.profile_picture.isNullOrEmpty()) {
+                        val initial = profileData.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
                         Box(
                             modifier = Modifier
                                 .size(90.dp)
@@ -182,7 +260,7 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
                             )
                         }
                     } else {
-                        val decodedBytes = Base64.decode(profile.profile_picture, Base64.DEFAULT)
+                        val decodedBytes = Base64.decode(profileData.profile_picture, Base64.DEFAULT)
                         val profilePicture = BitmapFactory.decodeStream(ByteArrayInputStream(decodedBytes))
 
                         Image(
@@ -198,34 +276,39 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(text = profile.name,
+                    Text(
+                        text = profileData.name,
                         fontSize = 16.sp,
                         lineHeight = 24.sp,
                         fontFamily = FontFamily.Default,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
                         letterSpacing = 0.5.sp,
-                        textAlign = TextAlign.Center)
-                    Text(text = profile.university,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = profileData.university,
                         fontSize = 12.sp,
                         lineHeight = 24.sp,
                         fontFamily = FontFamily.Default,
                         fontWeight = FontWeight(400),
                         color = LightGrey,
                         letterSpacing = 0.5.sp,
-                        textAlign = TextAlign.Center)
-                    Text(text = profile.major,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = profileData.major,
                         fontSize = 12.sp,
                         lineHeight = 24.sp,
                         fontFamily = FontFamily.Default,
                         fontWeight = FontWeight(400),
                         color = LightGrey,
                         letterSpacing = 0.5.sp,
-                        textAlign = TextAlign.Center)
+                        textAlign = TextAlign.Center
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-
 
                 Text(
                     text = "Learning Styles",
@@ -240,7 +323,7 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Start
                 ) {
-                    profile.learning_styles.forEach { style ->
+                    profileData.learning_styles.forEach { style ->
                         Box(
                             modifier = Modifier
                                 .padding(4.dp)
@@ -251,36 +334,60 @@ fun StudentProfileScreen(viewModel: StudentProfileViewModel, studentId: String, 
                         }
                     }
                 }
+
                 Text(
                     text = "Tutoring sessions pending to review",
                     style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.align(Alignment.Start).padding(vertical = 8.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(vertical = 8.dp)
+                        .fillMaxWidth(),
                     textAlign = TextAlign.Center,
                     color = Primary,
                     fontWeight = FontWeight.Bold
                 )
+
                 ListOfTutorCardsToReview(Modifier, studentId, tutoringSessionsToReview)
-
-
             }
-
         }
     }
 }
 
 
+
 @Composable
-fun ListOfTutorCardsToReview(modifier: Modifier, token: String, tutoringSessionsToReview: GetTutoringSessionsToReviewResponse){
-
+fun ListOfTutorCardsToReview(modifier: Modifier, token: String, tutoringSessionsToReview: GetTutoringSessionsToReviewResponse?){
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
-
-    Column(modifier = modifier
-        .fillMaxSize()
-        .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(20.dp)){
-        tutoringSessionsToReview.data.forEach {
-                tutoringSession -> TutorCardToReview(modifier = Modifier, tutoringSession = tutoringSession, token = token)
+    if(tutoringSessionsToReview!=null || NetworkUtils.isConnected(context)) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            if (tutoringSessionsToReview != null) {
+                tutoringSessionsToReview.data.forEach { tutoringSession ->
+                    TutorCardToReview(
+                        modifier = Modifier,
+                        tutoringSession = tutoringSession,
+                        token = token
+                    )
+                }
+            }
         }
+    }
+    else{
+        Text(
+            text = "There isn't internet connection try later",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier
+                .padding(vertical = 8.dp)
+                .fillMaxWidth(),
+            textAlign = TextAlign.Center,
+            color = Color.Black,
+            fontWeight = FontWeight.Normal
+        )
     }
 }
 
