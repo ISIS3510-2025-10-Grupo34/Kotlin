@@ -74,93 +74,119 @@ import com.tutorapp.data.StudentProfileEntity
 import com.tutorapp.remote.NetworkUtils
 import com.tutorapp.viewModels.StudentProfileViewModel
 import kotlinx.coroutines.CoroutineScope
+import androidx.compose.runtime.DisposableEffect 
+import androidx.compose.runtime.LaunchedEffect 
+import android.net.ConnectivityManager 
+import android.net.Network 
+import android.net.NetworkCapabilities 
+import android.net.NetworkRequest 
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.ui.text.style.TextAlign
+import com.tutorapp.data.ShowTutorsViewModelFactory
 
 
 class ShowTutorsActivity: ComponentActivity(){
-    private val showTutorsViewModel: ShowTutorsViewModel by viewModels()
-    private val studentProfileViewModel: StudentProfileViewModel by viewModels()
-
+    private val showTutorsViewModel: ShowTutorsViewModel by viewModels {
+        ShowTutorsViewModelFactory(application) // <-- Usa la Factory aquí
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val token = intent.getStringExtra("TOKEN_KEY") ?: ""
+        setContent {
+            TutorAppTheme {
+                // Estados para los datos que vienen de getSearchResults
+                var universities by remember { mutableStateOf<List<UniversitySimple>>(emptyList()) }
+                var coursesByUniversity by remember { mutableStateOf<Map<String, List<CourseSimple>>?>(null) }
+                var tutorsByCourse by remember { mutableStateOf<Map<String, List<String>>?>(null) }
 
-        showTutorsViewModel.loadInitialSessions()
+                val snackbarHostState = remember { SnackbarHostState() }
+                val scope = rememberCoroutineScope()
+                val context = LocalContext.current
+                // Obtén el ViewModel (ya usa la Factory correcta)
+                val viewModel = showTutorsViewModel
 
-        showTutorsViewModel.getSearchResults(){ sucess, data ->
-            if(sucess){
-                val universities: List<UniversitySimple> = data?.data?.map { (uniName, uni) ->
-                    UniversitySimple(name = uniName, id = uni.id)
-                } ?: emptyList()
-
-                val coursesByUniversity: Map<String, List<CourseSimple>>? = data?.data?.mapValues { (_, uni) ->
-                    uni.courses.map { (courseName, course) ->
-                        CourseSimple(courseName = courseName, id = course.id)
+                // Listener de conectividad (tu código existente)
+                val isOffline = remember{ mutableStateOf(!viewModel.isNetworkAvailable()) }
+                DisposableEffect(Unit){
+                    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                    val networkCallback = object: ConnectivityManager.NetworkCallback(){
+                        override fun onAvailable(network: Network){ super.onAvailable(network); isOffline.value = false }
+                        override fun onLost(network:Network){ super.onLost(network); isOffline.value = true }
+                        override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                            super.onCapabilitiesChanged(network, networkCapabilities)
+                            val hasInternet = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                                    networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                            isOffline.value = !hasInternet
+                        }
                     }
+                    val networkRequest = NetworkRequest.Builder()
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build()
+                    connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
+                    onDispose { connectivityManager.unregisterNetworkCallback(networkCallback) }
                 }
-                val tutorsByCourse: Map<String, List<String>>? = data?.data?.flatMap { (_, university) ->
-                    university.courses.map { (courseName, course) ->
-                        courseName to course.tutors_names
-                    }
-                }?.toMap()
-
-                Log.i("universities", universities.toString() )
-                Log.i("courses", coursesByUniversity.toString())
-                Log.i("tutors", tutorsByCourse.toString())
-                val timeToBookStartTime = System.currentTimeMillis()
-                val prefs = getSharedPreferences("timeToBookPrefs", MODE_PRIVATE)
-                prefs.edit().putLong("timeToBookStart", timeToBookStartTime).apply()
-                Log.i("mitag", "tiempo iniciado")
-                setContent{
-                    TutorAppTheme {
-                        val snackbarHostState = remember {SnackbarHostState()}
-                        val scope = rememberCoroutineScope()
-                        Scaffold(
-                            modifier = Modifier.fillMaxSize(),
-                            snackbarHost = {SnackbarHost(hostState = snackbarHostState)}
-                        ) { innerPadding ->
-                            ShowTutorsScreen(
-                                Modifier.padding(innerPadding),
-                                showTutorsViewModel,
-                                token,
-                                universities,
-                                coursesByUniversity,
-                                tutorsByCourse,
-                                scope = scope,
-                                snackbarHostState = snackbarHostState,
-                                studentProfileViewModel = studentProfileViewModel
+                LaunchedEffect(isOffline.value) { // Efecto para el Snackbar de offline
+                    if (isOffline.value) {
+                        scope.launch {
+                            snackbarHostState.currentSnackbarData?.dismiss()
+                            snackbarHostState.showSnackbar(
+                                message = "No internet connection. Sessions shown may differ from those in real time.",
+                                duration = SnackbarDuration.Indefinite
                             )
-
+                        }
+                    } else {
+                        snackbarHostState.currentSnackbarData?.let {
+                            if(it.visuals.message == "No internet connection. Sessions shown may differ from those in real time.") { it.dismiss() }
                         }
                     }
                 }
-            }else {
-                setContent{
-                    TutorAppTheme {
-                        val snackbarHostState = remember {SnackbarHostState()}
-                        val scope = rememberCoroutineScope()
-                        Scaffold(
-                            modifier = Modifier.fillMaxSize(),
-                            snackbarHost = {SnackbarHost(hostState = snackbarHostState)}
-                            ) { innerPadding ->
-                            ShowTutorsScreen(
-                                Modifier.padding(innerPadding),
-                                showTutorsViewModel,
-                                token,
-                                emptyList(),
-                                emptyMap(),
-                                emptyMap(),
-                                scope = scope,
-                                snackbarHostState = snackbarHostState,
-                                studentProfileViewModel = studentProfileViewModel
-                            )
 
+                // --- Llamada a getSearchResults para los datos de filtros ---
+                LaunchedEffect(Unit) {
+                    Log.d("ActivityCompose", "Calling getSearchResults...")
+                    viewModel.getSearchResults { success, data ->
+                        Log.d("ActivityCompose", "getSearchResults Result: success=$success")
+                        if (success && data != null) {
+                            universities = data.data?.map { (uniName, uni) -> UniversitySimple(name = uniName, id = uni.id) } ?: emptyList()
+                            coursesByUniversity = data.data?.mapValues { (_, uni) -> uni.courses.map { (cName, c) -> CourseSimple(cName, c.id) } }
+                            tutorsByCourse = data.data?.flatMap { (_, uni) -> uni.courses.map { (cName, c) -> cName to c.tutors_names } }?.toMap()
+                            Log.d("ActivityCompose", "Filter data updated.")
+                        } else {
+                            Log.e("ActivityCompose", "getSearchResults failed or returned null data.")
+                            // Opcional: Mostrar error si falla carga de filtros
+                            // scope.launch { snackbarHostState.showSnackbar("Failed to load filter options") }
                         }
                     }
+                }
+
+                // Log inicial de tiempo
+                LaunchedEffect(Unit) {
+                    val timeToBookStartTime = System.currentTimeMillis()
+                    val prefs = getSharedPreferences("timeToBookPrefs", MODE_PRIVATE)
+                    prefs.edit().putLong("timeToBookStart", timeToBookStartTime).apply()
+                    Log.i("ShowTutorsTime", "Time to book started")
+                }
+
+
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+                ) { innerPadding ->
+                    // Llama a ShowTutorsScreen pasando los estados que se actualizan
+                    ShowTutorsScreen(
+                        Modifier.padding(innerPadding),
+                        viewModel, // Pasa el ViewModel completo
+                        token,
+                        universities, // Pasa el estado
+                        coursesByUniversity, // Pasa el estado
+                        tutorsByCourse, // Pasa el estado
+                        scope = scope,
+                        snackbarHostState = snackbarHostState
+                    )
                 }
             }
-        }
-    }
-
+        } // --- Fin de setContent ---
+    } // Fin de onCreate
 
 }
 @Composable
@@ -332,37 +358,48 @@ fun FilterResultsButton(modifier: Modifier, showTutorsViewModel: ShowTutorsViewM
 
 @Composable
 fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel, token: String, scope: CoroutineScope, snackbarHostState: SnackbarHostState){
-
+    // Usando Column + verticalScroll como en tu versión
     val sessions = showTutorsViewModel.sessions
     val emptyFilter = showTutorsViewModel.emptyFilter
+    val isLoading = showTutorsViewModel.isLoading // Podrías usar isLoading para un indicador
     val scrollState = rememberScrollState()
-    
-    if (emptyFilter){
-        Text("No tutoring sessions matched with the filter.", modifier = modifier.fillMaxWidth())
-        Column(modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)){
-            sessions.forEach {
-                    tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel, scope=scope, snackbarHostState = snackbarHostState)
+
+    if (isLoading && sessions.isEmpty()) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(16.dp), // Padding aplicado aquí
+            verticalArrangement = Arrangement.spacedBy(16.dp) // Espacio entre tarjetas
+        ) {
+            if (emptyFilter) {
+                Text("No tutoring sessions matched with the filter.", modifier = Modifier.fillMaxWidth().padding(vertical=16.dp), textAlign = TextAlign.Center)
+            } else if (sessions.isEmpty() && !isLoading) {
+                Text("No tutoring sessions available.", modifier = Modifier.fillMaxWidth().padding(vertical=16.dp), textAlign = TextAlign.Center)
+            } else {
+                sessions.forEach { tutoringSession ->
+                    TutorCard(
+                        modifier = Modifier.fillMaxWidth(), // Tarjeta ocupa ancho
+                        tutoringSession = tutoringSession,
+                        token = token,
+                        showTutorsViewModel = showTutorsViewModel,
+                        scope = scope,
+                        snackbarHostState = snackbarHostState
+                    )
+                }
+            }
+            // Indicador de carga al final si está refrescando y hay items
+            if (isLoading && sessions.isNotEmpty()) {
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical=16.dp), horizontalArrangement = Arrangement.Center) {
+                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                }
             }
         }
     }
-    else{
-        Column(modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)){
-            sessions.forEach {
-                    tutoringSession -> TutorCard(modifier = Modifier, tutoringSession = tutoringSession, token = token, showTutorsViewModel = showTutorsViewModel, scope=scope, snackbarHostState = snackbarHostState)
-            }
-        }
-    }
-
-
-
 }
 
 
@@ -462,9 +499,9 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: Strin
                         Log.e("TutorCard", "Error opening WhatsApp link", e)
                     }
                 }else{
-                    scope.launch {
+                    /*scope.launch {
                         snackbarHostState.showSnackbar("No internet connection") // Mensaje en inglés
-                    }
+                    }*/
                 }
             },
             modifier = Modifier.align(Alignment.End),
