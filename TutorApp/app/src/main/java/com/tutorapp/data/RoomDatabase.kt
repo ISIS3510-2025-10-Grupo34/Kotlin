@@ -16,9 +16,10 @@ import androidx.room.RoomDatabase
         SessionDataEntity::class,
         DraftReviewEntity::class,
         TutoringSessionEntity::class,
+        CachedNotificationEntity::class,
 
     ],
-    version = 4
+    version = 5
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun studentFormDao(): StudentFormDao
@@ -27,6 +28,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sessionDataDao(): SessionDataDao
     abstract fun draftReviewDao(): DraftReviewDao
     abstract fun tutoringSessionDao(): TutoringSessionDao
+    abstract fun cachedNotificationDao(): CachedNotificationDao
+
 
 
     companion object {
