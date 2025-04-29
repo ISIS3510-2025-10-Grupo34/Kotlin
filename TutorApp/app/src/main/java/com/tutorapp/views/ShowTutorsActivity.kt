@@ -66,13 +66,20 @@ import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import com.google.android.gms.location.LocationServices
+import com.tutorapp.data.AppDatabase
+import com.tutorapp.data.Converters
+import com.tutorapp.data.StudentProfileEntity
+import com.tutorapp.remote.NetworkUtils
+import com.tutorapp.viewModels.StudentProfileViewModel
 import kotlinx.coroutines.CoroutineScope
-import androidx.compose.runtime.DisposableEffect // <-- Importar
-import androidx.compose.runtime.LaunchedEffect // <-- Importar
-import android.net.ConnectivityManager // <-- Importar
-import android.net.Network // <-- Importar
-import android.net.NetworkCapabilities // <-- Importar
-import android.net.NetworkRequest // <-- Importar
+import androidx.compose.runtime.DisposableEffect 
+import androidx.compose.runtime.LaunchedEffect 
+import android.net.ConnectivityManager 
+import android.net.Network 
+import android.net.NetworkCapabilities 
+import android.net.NetworkRequest 
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.ui.text.style.TextAlign
@@ -83,14 +90,9 @@ class ShowTutorsActivity: ComponentActivity(){
     private val showTutorsViewModel: ShowTutorsViewModel by viewModels {
         ShowTutorsViewModelFactory(application) // <-- Usa la Factory aquí
     }
-
-
-    // En ShowTutorsActivity > onCreate
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val token = intent.getStringExtra("TOKEN_KEY") ?: ""
-
-        // --- setContent es ahora lo principal ---
         setContent {
             TutorAppTheme {
                 // Estados para los datos que vienen de getSearchResults
@@ -189,7 +191,48 @@ class ShowTutorsActivity: ComponentActivity(){
 }
 @Composable
 fun ShowTutorsScreen(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel, token: String, universities: List<UniversitySimple>,
-                     coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?, scope: CoroutineScope, snackbarHostState: SnackbarHostState){
+                     coursesByUniversity: Map<String, List<CourseSimple>>?, tutorsByCourse : Map<String, List<String>>?, scope: CoroutineScope, snackbarHostState: SnackbarHostState, studentProfileViewModel: StudentProfileViewModel){
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val db = AppDatabase.getDatabase(context)
+    val dao = db.studentProfileDao()
+    val userid = Session.userid
+    val role = Session.role
+
+
+    if(NetworkUtils.isConnected(context)) {
+        if (role == "student") {
+            LaunchedEffect(userid) {
+
+                coroutineScope.launch { val data = dao.loadData()
+                    if(data==null){
+                        studentProfileViewModel.studentProfile(userid.toString()) { profile ->
+                            coroutineScope.launch {
+                                if (profile != null) {
+                                    dao.saveData(
+                                        StudentProfileEntity(
+                                            name = profile.name,
+                                            university = profile.university,
+                                            major = profile.major,
+                                            learningStyles = Converters.fromStringList(profile.learning_styles)
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+
+
+            }
+        }
+    }
+
+
+
+
+
     BackHandler(enabled = true) {
 
     }
