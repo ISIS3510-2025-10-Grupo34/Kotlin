@@ -6,7 +6,6 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-
 @Database(
     entities = [
         StudentFormEntity::class,
@@ -19,8 +18,6 @@ import androidx.room.TypeConverters
         TutoringSessionEntity::class,
         CachedNotificationEntity::class,
         StudentProfileEntity::class
-
-
     ],
     version = 5
 )
@@ -34,9 +31,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tutoringSessionDao(): TutoringSessionDao
     abstract fun cachedNotificationDao(): CachedNotificationDao
     abstract fun studentProfileDao(): StudentProfileDao
-
-
-
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
