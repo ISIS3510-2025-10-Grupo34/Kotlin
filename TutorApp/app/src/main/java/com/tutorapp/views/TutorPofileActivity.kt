@@ -51,6 +51,13 @@ class TutorProfileActivity : ComponentActivity() {
     private lateinit var connectivityManager: ConnectivityManager
     private lateinit var networkRequest: NetworkRequest
 
+    private val networkCallback = object: ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            super.onAvailable(network)
+            viewModel.loadTutorProfile(currentTutorId)
+        }
+    }
+
     // usar nuestro ViewModelFactory
     private val viewModel: TutorProfileViewModel by viewModels {
         TutorProfileViewModelFactory(application)
@@ -69,11 +76,7 @@ class TutorProfileActivity : ComponentActivity() {
         networkRequest = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
-        connectivityManager.registerNetworkCallback(networkRequest, object: ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                viewModel.loadTutorProfile(currentTutorId)
-            }
-        })
+        connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
 
         // inicializar carga
         viewModel.loadTutorProfile(currentTutorId)
@@ -86,7 +89,7 @@ class TutorProfileActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        connectivityManager.unregisterNetworkCallback(ConnectivityManager.NetworkCallback())
+        connectivityManager.unregisterNetworkCallback(networkCallback)
     }
 }
 
@@ -131,7 +134,7 @@ fun TutorProfileContent(
         ) {
             if (uiState.isStale) {
                 Text(
-                    text = "No internet connection: displayed data may be outdated. Will refresh when reconnected.",
+                    text = if (currentUserInfo?.role == "student") "No internet connection: displayed information may not be the desired. Will refresh when reconnected." else "No internet connection: your profile information may be outdated. Will refresh when reconnected.",
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
@@ -189,6 +192,8 @@ fun TutorProfileHeader(modifier: Modifier) {
                         tint = Color.White
                     )
                 }
+            }
+            if (Session.role == "tutor" || Session.role == "student") {
                 IconButton(
                     onClick = {
                         val db = AppDatabase.getDatabase(context)
