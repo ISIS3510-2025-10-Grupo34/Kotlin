@@ -45,6 +45,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.tutorapp.data.AppDatabase
 import com.tutorapp.data.TutorProfileViewModelFactory
+import com.tutorapp.remote.NetworkUtils
 import kotlinx.coroutines.launch
 
 class TutorProfileActivity : ComponentActivity() {
@@ -223,8 +224,61 @@ fun TutorProfileScreen(
     tutorProfileInfo: GetTutorProfileResponse,
     timeToBookInsightData: GetTimeToBookInsightResponse?
 ) {
+    val avgratingog= tutorProfileInfo.data.ratings.toFloat()
+    val avgrating = String.format("%.2f", avgratingog).toFloat()
+    val tutorId = Session.userid
+    var showDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
-
+    LaunchedEffect(Unit) {
+        if (avgrating < 4.9 && NetworkUtils.isConnected(context) &&Session.role=="tutor") {
+            if (NetworkUtils.shouldShowRatingWarning(context, tutorId.toString())) {
+                showDialog = true
+                NetworkUtils.markRatingWarningAsShown(context, tutorId.toString())
+            }
+        }
+    }
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { /* Forzar usar el botón */ },
+            title = { Text(text = "We can help you improve!") },
+            text = {
+                Text(
+                    "Your average review rating is a bit low ($avgrating), we took the job of searching tutors" +
+                            " similar to you. Now you can see their best reviews to get notes on how you can improve!"
+                )
+            },
+            confirmButton = {
+                Row(){
+                Button(
+                    onClick = { showDialog = false },
+                    colors = ButtonColors(
+                        containerColor = Color.LightGray,
+                        contentColor = Color.Black,
+                        disabledContentColor = Color.White,
+                        disabledContainerColor = Color(0xFF192650)
+                    )
+                ) {
+                    Text("Dismiss")
+                }
+                Button(
+                    onClick = { showDialog = false
+                        val intent = Intent(
+                            context,
+                            SimilarTutorsActivity::class.java
+                        )
+                        context.startActivity(intent)       },
+                    colors = ButtonColors(
+                        containerColor = Color(0xFF192650),
+                        contentColor = Color.White,
+                        disabledContentColor = Color.White,
+                        disabledContainerColor = Color(0xFF192650)
+                    )
+                ) {
+                    Text("See tutors")
+                }
+            }}
+        )
+    }
     TutorProfileHeader(modifier = Modifier.height(IntrinsicSize.Min))
     Spacer(modifier = Modifier.height(16.dp))
 

@@ -90,4 +90,8 @@ interface ApiService {
         @Query("tutorId") tutorId: Int,
     ): Response<GetTimeToBookInsightResponse>
 
+    @GET("similar-tutors-reviews/{tutorId}")
+    suspend fun getSimilarTutorsReviews(@Path("tutorId") tutorId: Int): Response<SimilarTutorsResponse>
+
+
 }
