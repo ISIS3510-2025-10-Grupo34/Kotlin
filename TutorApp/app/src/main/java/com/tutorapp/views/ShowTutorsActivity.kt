@@ -90,6 +90,7 @@ class ShowTutorsActivity: ComponentActivity(){
     private val showTutorsViewModel: ShowTutorsViewModel by viewModels {
         ShowTutorsViewModelFactory(application) // <-- Usa la Factory aquí
     }
+    val studentProfileViewModel = StudentProfileViewModel()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val token = intent.getStringExtra("TOKEN_KEY") ?: ""
@@ -181,7 +182,8 @@ class ShowTutorsActivity: ComponentActivity(){
                         coursesByUniversity, // Pasa el estado
                         tutorsByCourse, // Pasa el estado
                         scope = scope,
-                        snackbarHostState = snackbarHostState
+                        snackbarHostState = snackbarHostState,
+                        studentProfileViewModel
                     )
                 }
             }
