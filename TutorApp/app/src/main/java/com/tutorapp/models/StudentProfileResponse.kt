@@ -12,5 +12,5 @@ data class dataSP(
     val name: String,
     val university: String,
     val major: String,
-    val profile_picture: String,
+    val profile_picture: String?,
     val learning_styles: List<String>)

@@ -57,7 +57,7 @@ class TutorProfileActivity : ComponentActivity() {
             viewModel.loadTutorProfile(currentTutorId)
         }
     }
-
+    
     // usar nuestro ViewModelFactory
     private val viewModel: TutorProfileViewModel by viewModels {
         TutorProfileViewModelFactory(application)
@@ -133,7 +133,7 @@ fun TutorProfileContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (uiState.isStale) {
-                Text(
+                Text
                     text = if (currentUserInfo?.role == "student") "No internet connection: displayed information may not be the desired. Will refresh when reconnected." else "No internet connection: your profile information may be outdated. Will refresh when reconnected.",
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
