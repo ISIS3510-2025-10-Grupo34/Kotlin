@@ -1,5 +1,6 @@
 package com.tutorapp.views
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +21,7 @@ import com.tutorapp.viewModels.SimilarTutorsViewModel
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import android.content.Intent
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.Card
@@ -27,10 +29,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.platform.LocalContext
 import com.tutorapp.models.BestReview
 import com.tutorapp.models.SimilarTutorReview
+import com.tutorapp.remote.NetworkUtils
 import com.tutorapp.views.HomeActivity
 import com.tutorapp.views.Session
+import kotlinx.coroutines.launch
 
 class SimilarTutorsActivity : ComponentActivity() {
     private val viewModel: SimilarTutorsViewModel by viewModels()
@@ -39,9 +44,11 @@ class SimilarTutorsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
             if (tutorid != null) {
                 viewModel.fetchSimilarTutors(tutorid)
             }
+
 
 
         setContent {
@@ -58,6 +65,34 @@ class SimilarTutorsActivity : ComponentActivity() {
 }
 @Composable
 fun SimilarTutorsScreen(viewModel: SimilarTutorsViewModel, onSeeReviews: (List<BestReview>) -> Unit) {
+   val context = LocalContext.current
+    if(!NetworkUtils.isConnected(context)){
+    AlertDialog(
+        onDismissRequest = { /* Forzar usar el botón */ },
+        title = { Text(text = "We are sorry") },
+        text = {
+            Text(
+                "You've lost connection, try again later"
+            )
+        },
+        confirmButton = {
+
+                Button(
+                    onClick = { (context as? Activity)?.finish() },
+                    colors = ButtonColors(
+                        containerColor = Color.LightGray,
+                        contentColor = Color.Black,
+                        disabledContentColor = Color.White,
+                        disabledContainerColor = Color(0xFF192650)
+                    )
+                ) {
+                    Text("Ok")
+                }
+
+
+            }
+    )}
+    else{
 
     if (viewModel.isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -92,7 +127,7 @@ fun SimilarTutorsScreen(viewModel: SimilarTutorsViewModel, onSeeReviews: (List<B
                 }
             }
         }
-    }
+    }}
 }
 @Composable
 fun TutorCard(tutor: SimilarTutorReview, counter: Int, onSeeReviews: (List<BestReview>) -> Unit) {

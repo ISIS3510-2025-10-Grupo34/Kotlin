@@ -41,6 +41,7 @@ import android.content.*
 import android.net.*
 import android.os.*
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.tutorapp.data.AppDatabase
@@ -108,6 +109,9 @@ fun TutorProfileContent(
     uiState: TutorProfileUiState,
     currentUserInfo: LoginTokenDecoded?
 ) {
+    BackHandler(enabled = true) {
+
+    }
     // Loading state
     if (uiState.isLoading && uiState.profile == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -235,7 +239,9 @@ fun TutorProfileScreen(
     val avgrating = String.format("%.2f", avgratingog).toFloat()
     val tutorId = Session.userid
     var showDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
+    var context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
         if (avgrating < 4.9 && NetworkUtils.isConnected(context) &&Session.role=="tutor") {
             if (NetworkUtils.shouldShowRatingWarning(context, tutorId.toString())) {
@@ -245,6 +251,7 @@ fun TutorProfileScreen(
         }
     }
     if (showDialog) {
+        context = LocalContext.current
         AlertDialog(
             onDismissRequest = { /* Forzar usar el botón */ },
             title = { Text(text = "We can help you improve!") },
@@ -267,13 +274,16 @@ fun TutorProfileScreen(
                 ) {
                     Text("Dismiss")
                 }
+                    context = LocalContext.current
                 Button(
-                    onClick = { showDialog = false
+
+                    onClick = {showDialog = false
+
                         val intent = Intent(
                             context,
                             SimilarTutorsActivity::class.java
                         )
-                        context.startActivity(intent)       },
+                        context.startActivity(intent) },
                     colors = ButtonColors(
                         containerColor = Color(0xFF192650),
                         contentColor = Color.White,

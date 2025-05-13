@@ -2,12 +2,14 @@ package com.tutorapp.views
 
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.collection.LruCache
 import com.tutorapp.viewModels.StudentProfileViewModel
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -56,6 +58,18 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 
+object ProfileImageCache {
+    private val cacheSize = (Runtime.getRuntime().maxMemory() / 1024 / 8).toInt() // Usamos 1/8 de la memoria
+    private val lruCache = object : LruCache<String, Bitmap>(cacheSize) {}
+
+    fun put(key: String, bitmap: Bitmap) {
+        lruCache.put(key, bitmap)
+    }
+
+    fun get(key: String): Bitmap? {
+        return lruCache.get(key)
+    }
+}
 
 
 class StudentProfileActivity : ComponentActivity() {
@@ -122,15 +136,21 @@ fun StudentProfileScreen(
         viewModel.studentProfile(studentId) {
             isLoading = false
             viewModel.studentProfile?.let { profile ->
+                // Guardar imagen si viene
+                profile.profile_picture?.let {
+                    val decodedBytes = Base64.decode(it, Base64.DEFAULT)
+                    val bitmap = BitmapFactory.decodeStream(ByteArrayInputStream(decodedBytes))
+                    ProfileImageCache.put(studentId, bitmap)
+                }
+
                 val entity = StudentProfileEntity(
                     name = profile.name,
                     university = profile.university,
                     major = profile.major,
                     learningStyles = Converters.fromStringList(profile.learning_styles)
                 )
-                println(entity)
+
                 coroutineScope.launch {
-                    println(entity.toString()+"jmmm")
                     studentProfileDao.saveData(entity)
                 }
             }
@@ -243,7 +263,32 @@ fun StudentProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (profileData.profile_picture.isNullOrEmpty()) {
+                    val cachedBitmap = ProfileImageCache.get(studentId)
+                    if (cachedBitmap != null) {
+                        Image(
+                            bitmap = cachedBitmap.asImageBitmap(),
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier
+                                .size(90.dp)
+                                .clip(CircleShape)
+                                .border(2.dp, Color.White, CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else if (!profileData.profile_picture.isNullOrEmpty()) {
+                        val decodedBytes = Base64.decode(profileData.profile_picture, Base64.DEFAULT)
+                        val bitmap = BitmapFactory.decodeStream(ByteArrayInputStream(decodedBytes))
+                        ProfileImageCache.put(studentId, bitmap)
+
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier
+                                .size(90.dp)
+                                .clip(CircleShape)
+                                .border(2.dp, Color.White, CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
                         val initial = profileData.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
                         Box(
                             modifier = Modifier
@@ -259,19 +304,6 @@ fun StudentProfileScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                    } else {
-                        val decodedBytes = Base64.decode(profileData.profile_picture, Base64.DEFAULT)
-                        val profilePicture = BitmapFactory.decodeStream(ByteArrayInputStream(decodedBytes))
-
-                        Image(
-                            bitmap = profilePicture.asImageBitmap(),
-                            contentDescription = "Profile Picture",
-                            modifier = Modifier
-                                .size(90.dp)
-                                .clip(CircleShape)
-                                .border(2.dp, Color.White, CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
