@@ -109,9 +109,11 @@ fun TutorProfileContent(
     uiState: TutorProfileUiState,
     currentUserInfo: LoginTokenDecoded?
 ) {
-    BackHandler(enabled = true) {
 
-    }
+    val enableBackHandler = currentUserInfo?.role == "tutor"
+
+    BackHandler(enabled = enableBackHandler) {}
+
     // Loading state
     if (uiState.isLoading && uiState.profile == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -369,7 +371,12 @@ fun TutorProfileScreen(
     if (currentUserInfo?.role == "tutor" && !isStale) {
         Spacer(modifier = Modifier.height(16.dp))
         Button(
-            onClick = { /* announce logic */ },
+            onClick = {
+                val intent = Intent(context, AddCourseActivity::class.java).apply {
+                    putExtra("TOKEN_KEY", currentUserInfo)
+                }
+                context.startActivity(intent)
+            },
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF192650))
         ) {
