@@ -3,6 +3,7 @@ package com.tutorapp.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -14,7 +15,9 @@ data class CachedNotificationEntity(
     val message: String,
     val place: String,
     val date: String,
-    val university: String
+    val university: String,
+    val scheduledTime: String?,
+    val deadline: String?
 )
 
 @Dao
@@ -27,4 +30,11 @@ interface CachedNotificationDao {
 
     @Query("DELETE FROM cached_notifications WHERE university = :university")
     suspend fun clearForUniversity(university: String)
+
+    @Query("SELECT * FROM cached_notifications WHERE scheduledTime IS NOT NULL")
+    suspend fun getPendingToRetry(): List<CachedNotificationEntity>
+
+    @Delete
+    suspend fun delete(notification: CachedNotificationEntity)
+
 }

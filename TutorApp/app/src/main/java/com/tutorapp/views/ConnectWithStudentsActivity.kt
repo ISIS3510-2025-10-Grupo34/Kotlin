@@ -26,7 +26,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
@@ -50,17 +49,21 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.lifecycleScope
+import com.tutorapp.data.AppDatabase
+import com.tutorapp.data.CachedNotificationEntity
 import com.tutorapp.models.Notification
-import com.tutorapp.remote.RetrofitClient
+import com.tutorapp.remote.NetworkUtils
 import com.tutorapp.viewModels.NotificationCenterViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.*
 import java.time.LocalDateTime
-import kotlin.math.*
-
-
+import java.time.LocalTime
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 
 
 class ConnectWithStudentsActivity : ComponentActivity() {
@@ -71,15 +74,26 @@ class ConnectWithStudentsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         setContent {
             TutorAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
 
-                    ConnectWithStudentsScreen(modifier = Modifier.padding(innerPadding), notificationCenterViewModel)
+                val snackbarHostState = remember { SnackbarHostState() }
+
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    snackbarHost = { SnackbarHost(snackbarHostState) }
+                ) { innerPadding ->
+                    ConnectWithStudentsScreen(
+                        modifier = Modifier.padding(innerPadding),
+                        notificationCenterViewModel = notificationCenterViewModel,
+                        snackbarHostState = snackbarHostState
+                    )
                 }
             }
         }
     }
+
 }
 
 
@@ -87,7 +101,8 @@ class ConnectWithStudentsActivity : ComponentActivity() {
 @Composable
 fun ConnectWithStudentsScreen(
     modifier: Modifier,
-    notificationCenterViewModel: NotificationCenterViewModel
+    notificationCenterViewModel: NotificationCenterViewModel,
+    snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
     val fusedLocationClient = remember {
@@ -132,6 +147,7 @@ fun ConnectWithStudentsScreen(
     }
 
     LaunchedEffect(Unit) {
+
         val locationPermission = Manifest.permission.ACCESS_FINE_LOCATION
         val locationGranted = ContextCompat.checkSelfPermission(context, locationPermission) == PackageManager.PERMISSION_GRANTED
         permissionGranted = locationGranted
@@ -150,7 +166,8 @@ fun ConnectWithStudentsScreen(
             NearestUniversityFinder(
                 modifier = Modifier,
                 context = context,
-                notificationCenterViewModel = notificationCenterViewModel
+                notificationCenterViewModel = notificationCenterViewModel,
+                snackbarHostState = snackbarHostState
             )
 
         }
@@ -254,17 +271,26 @@ fun InputField(
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NearestUniversityFinder(
     modifier: Modifier,
     context: Context,
-    notificationCenterViewModel: NotificationCenterViewModel
+    notificationCenterViewModel: NotificationCenterViewModel,
+    snackbarHostState: SnackbarHostState
 ) {
     var notificationPermissionGranted by remember { mutableStateOf(checkNotificationPermission(context)) }
     var notificationPermanentlyDenied by remember { mutableStateOf(false) }
     var showNotificationSettingsDialog by remember { mutableStateOf(false) }
     var permissionRequested by remember { mutableStateOf(false) }
+
+
+    // Estado del TimePicker
+    val timePickerState = rememberTimePickerState()
+    var showTimePicker by remember { mutableStateOf(false) }
+
+
 
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -307,16 +333,55 @@ fun NearestUniversityFinder(
         if (!notificationPermissionGranted && !permissionRequested) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+
+        launch {
+            val db = AppDatabase.getDatabase(context)
+            val dao = db.cachedNotificationDao()
+
+            while (true) {
+                delay(60_000)
+
+                if (NetworkUtils.isConnected(context)) {
+                    val now = LocalDateTime.now()
+                    val retryables = dao.getPendingToRetry().filter {
+                        val deadlineTime = LocalTime.parse(it.deadline)
+                        now.toLocalTime().isBefore(deadlineTime)
+                    }
+
+                    retryables.forEach { notif ->
+                        try {
+                            notificationCenterViewModel.postNotification(
+                                Notification(
+                                    title = notif.title,
+                                    message = notif.message,
+                                    place = notif.place,
+                                    university = notif.university,
+                                    date = notif.date
+                                )
+                            )
+                            dao.delete(notif)
+                            Log.d("Retry", "Notification sent after retry: ${notif.title}")
+                        } catch (e: Exception) {
+                            Log.e("Retry", "Retry failed", e)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     var title by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var place by remember { mutableStateOf("") }
+    var timeLimit by remember { mutableStateOf("") }
+    var isTimeEmpty by remember { mutableStateOf(false) }
+
 
 
     var isTitleEmpty by remember { mutableStateOf(false) }
     var isMessageEmpty by remember { mutableStateOf(false) }
     var isPlaceEmpty by remember { mutableStateOf(false) }
+
 
     Column(
         modifier = modifier
@@ -364,15 +429,36 @@ fun NearestUniversityFinder(
                     isError = isPlaceEmpty
                 )
 
+
+                Text(text = "Retry deadline (HH:mm)", fontSize = 12.sp, color = Color.Gray)
+
+                Button(
+                    onClick = { showTimePicker = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFECE6F0)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        if (timeLimit.isEmpty()) "Pick Time" else "Selected: $timeLimit",
+                        color = Color(0xFF1A1A3F)
+                    )
+                }
+
+
+
                 Spacer(modifier = Modifier.height(16.dp))
+
+
+
+
 
                 Button(
                     onClick = {
                         isTitleEmpty = title.trim().isEmpty()
                         isMessageEmpty = message.trim().isEmpty()
                         isPlaceEmpty = place.trim().isEmpty()
+                        isTimeEmpty = timeLimit.isBlank()
 
-                        if (notificationPermissionGranted && !isTitleEmpty && !isMessageEmpty && !isPlaceEmpty) {
+                        if (notificationPermissionGranted && !isTitleEmpty && !isMessageEmpty && !isPlaceEmpty && !isTimeEmpty) {
                             sendNotification(
                                 context,
                                 channelId,
@@ -381,7 +467,9 @@ fun NearestUniversityFinder(
                                 message,
                                 place,
                                 nearestUniversity,
-                                notificationCenterViewModel
+                                notificationCenterViewModel,
+                                timeLimit = timeLimit,
+                                snackbarHostState = snackbarHostState
                             )
                         } else if (notificationPermissionGranted) {
                             // Los campos vacíos se resaltarán automáticamente
@@ -402,6 +490,40 @@ fun NearestUniversityFinder(
                         color = Color.White
                     )
                 }
+
+
+                if (showTimePicker) {
+                    TimePickerDialog(
+                        onDismissRequest = { showTimePicker = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                val hour = timePickerState.hour
+                                val minute = timePickerState.minute
+
+                                if (isTimeInFuture(hour, minute)) {
+                                    val formatted = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
+                                    timeLimit = formatted
+                                    showTimePicker = false
+                                } else {
+                                    // Muestra un snackbar o Toast
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        snackbarHostState.showSnackbar("Please pick a time at least 1 minute in the future.")
+                                    }
+                                }
+                            }) {
+                                Text("OK")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showTimePicker = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    ) {
+                        TimePicker(state = timePickerState)
+                    }
+                }
+
             }
         } else {
             Column(
@@ -586,8 +708,39 @@ fun createNotificationChannel(context: Context, channelId: String) {
     }
 }
 
+fun isTimeInFuture(hour: Int, minute: Int): Boolean {
+    val now = LocalTime.now()
+    val pickedTime = LocalTime.of(hour, minute)
+    return pickedTime.isAfter(now.plusMinutes(1))
+}
+
 @RequiresApi(Build.VERSION_CODES.O)
-fun sendNotification(context: Context, channelId: String, notificationId: Int, title: String, message: String, place: String, nearestUnivesity:String, notificationCenterViewModel: NotificationCenterViewModel) {
+fun sendNotification(context: Context, channelId: String, notificationId: Int, title: String, message: String, place: String, nearestUnivesity:String, notificationCenterViewModel: NotificationCenterViewModel,  timeLimit: String,
+                     snackbarHostState: SnackbarHostState ) {
+
+    val db = AppDatabase.getDatabase(context)
+    val cachedDao = db.cachedNotificationDao()
+
+    if (!NetworkUtils.isConnected(context)) {
+        val pending = CachedNotificationEntity(
+            title = title,
+            message = message,
+            place = place,
+            university = nearestUnivesity,
+            date = LocalDateTime.now().toString(),
+            scheduledTime = LocalDateTime.now().toString(),
+            deadline = timeLimit
+        )
+
+        CoroutineScope(Dispatchers.IO).launch {
+            cachedDao.insertAll(listOf(pending))
+            withContext(Dispatchers.Main) {
+                snackbarHostState.showSnackbar("No internet. Notification saved for retry.")
+            }
+        }
+        return
+    }
+
 
     notificationCenterViewModel.postNotification(Notification(title, message, place, university = nearestUnivesity.toString(), date = LocalDateTime.now().toString() ))
 
