@@ -93,5 +93,9 @@ interface ApiService {
     @GET("similar-tutors-reviews/{tutorId}")
     suspend fun getSimilarTutorsReviews(@Path("tutorId") tutorId: Int): Response<SimilarTutorsResponse>
 
+    @POST("book-tutoring-session/")
+    suspend fun bookTutoringSession(@Body request: BookTutoringSessionRequest): Response<ApiResponse>
+
+
 
 }
