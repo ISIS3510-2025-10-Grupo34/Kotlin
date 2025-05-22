@@ -22,7 +22,7 @@ import androidx.room.TypeConverters
 
 
     ],
-    version = 5
+    version = 6
 )
 
 abstract class AppDatabase : RoomDatabase() {
