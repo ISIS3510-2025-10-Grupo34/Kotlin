@@ -96,6 +96,6 @@ interface ApiService {
     @POST("book-tutoring-session/")
     suspend fun bookTutoringSession(@Body request: BookTutoringSessionRequest): Response<ApiResponse>
 
-
-
+    @GET("booked-sessions/")
+    suspend fun getBookedSessions(@Query("id") userId: Int): Response<BookedSessionsResponse>
 }

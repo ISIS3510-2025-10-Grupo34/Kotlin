@@ -8,157 +8,233 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-import kotlinx.coroutines.launch
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.GET
-import retrofit2.http.Path
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tutorapp.models.BookedSession
+import com.tutorapp.util.Session
+import com.tutorapp.viewModels.CalendarViewModel
 import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.*
 
-// Data classes
-data class Session2(
-    val date: String,      // YYYY-MM-DD
-    val count: Int         // number of sessions that day
-)
-
-data class SessionsResponse(
-    val sessions: List<Session2>
-)
-
-// Retrofit API
-interface ApiService {
-    @GET("/users/{id}/sessions")
-    suspend fun getUserSessions(
-        @Path("id") userId: String
-    ): SessionsResponse
-}
-
+@RequiresApi(Build.VERSION_CODES.O)
 class CalendarActivity : ComponentActivity() {
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val userId = intent.getStringExtra("ID") ?: return
         setContent {
-
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    CalendarScreen(userId = userId) { date ->
-                        // TODO: Navigate to SessionsDetailActivity
-                        // startActivity(Intent(this, SessionsDetailActivity::class.java).apply {
-                        //     putExtra("ID", userId)
-                        //     putExtra("DATE", date)
-                        // })
-                    }
-
+            MaterialTheme {
+                CalendarScreen()
             }
         }
     }
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CalendarScreen(
-    userId: String,
-    onDateClick: (String) -> Unit
-) {
-    val coroutineScope = rememberCoroutineScope()
-    var sessions by remember { mutableStateOf<Map<LocalDate, Int>>(emptyMap()) }
-    var loading by remember { mutableStateOf(true) }
+fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
+    var currentMonth by remember { mutableStateOf(YearMonth.now()) }
+    val selectedDate by viewModel.selectedDate.collectAsState()
+    val bookedSessions by viewModel.bookedSessions.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
 
-    // Initialize Retrofit
-    val retrofit = Retrofit.Builder()
-        .baseUrl("https://api.tutorapp.com") // Ajusta tu base URL
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-
-    val service = retrofit.create(ApiService::class.java)
-
-    LaunchedEffect(userId) {
-        try {
-            val response = service.getUserSessions(userId)
-            sessions = response.sessions.associate {
-                LocalDate.parse(it.date) to it.count
-            }
-        } catch (e: Exception) {
-            // Manejo de error
-            sessions = emptyMap()
-        } finally {
-            loading = false
+    LaunchedEffect(Unit) {
+        Session.userId?.toIntOrNull()?.let { userId ->
+            viewModel.loadBookedSessions(userId)
         }
     }
 
-    if (loading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Calendar") },
+                navigationIcon = {
+                    IconButton(onClick = { /* TODO: Handle back navigation */ }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
         }
-    } else {
-        // Mostrar calendario
-        val today = LocalDate.now()
-        val monthDays = today.withDayOfMonth(1).dayOfWeek.value // 1..7 pivot
-        val daysInMonth = today.lengthOfMonth()
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+        ) {
+            // Month selector
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { currentMonth = currentMonth.minusMonths(1) }) {
+                    Text("<", fontSize = 20.sp)
+                }
+                Text(
+                    text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${currentMonth.year}",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = { currentMonth = currentMonth.plusMonths(1) }) {
+                    Text(">", fontSize = 20.sp)
+                }
+            }
 
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Calendario de sesiones",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-                          )
             Spacer(modifier = Modifier.height(16.dp))
-            // Simple grid of days
-            val rows = ((daysInMonth + monthDays - 1) / 7) + 1
-            for (week in 0 until rows) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    for (dayOfWeek in 1..7) {
-                        val dayIndex = week * 7 + dayOfWeek - monthDays
-                        if (dayIndex in 1..daysInMonth) {
-                            val date = today.withDayOfMonth(dayIndex)
-                            val count = sessions[date] ?: 0
-                            val enabled = count > 0
-                            // Color scale: opacity relative to max sessions
-                            val maxSessions = sessions.values.maxOrNull() ?: 1
-                            val alpha = if (enabled) count.toFloat() / maxSessions else 0.2f
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(
-                                        color = Color(0xFF192650).copy(alpha = alpha),
-                                        shape = CircleShape
+
+            // Days of week header
+            Row(modifier = Modifier.fillMaxWidth()) {
+                val daysOfWeek = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                daysOfWeek.forEach { day ->
+                    Text(
+                        text = day,
+                        modifier = Modifier.weight(1f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Calendar grid
+            val firstDayOfMonth = currentMonth.atDay(1)
+            val lastDayOfMonth = currentMonth.atEndOfMonth()
+            val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7
+            val daysInMonth = lastDayOfMonth.dayOfMonth
+
+            val maxSessions = viewModel.getMaxSessionsInMonth()
+
+            Column {
+                var currentDay = 1
+                for (week in 0..5) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        for (dayOfWeek in 0..6) {
+                            if (week == 0 && dayOfWeek < firstDayOfWeek) {
+                                Box(modifier = Modifier.weight(1f))
+                            } else if (currentDay <= daysInMonth) {
+                                val date = currentMonth.atDay(currentDay)
+                                val sessionCount = viewModel.getSessionCountForDate(date)
+                                val color = if (sessionCount > 0) {
+                                    val intensity = (sessionCount.toFloat() / maxSessions).coerceIn(0f, 1f)
+                                    Color(0xFF4CAF50).copy(alpha = 0.2f + (intensity * 0.8f))
+                                } else {
+                                    Color.LightGray.copy(alpha = 0.2f)
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .aspectRatio(1f)
+                                        .padding(4.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .clickable(enabled = sessionCount > 0) {
+                                            viewModel.selectDate(date)
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = currentDay.toString(),
+                                        color = if (sessionCount > 0) Color.Black else Color.Gray
                                     )
-                                    .clickable(enabled) {
-                                        onDateClick(date.toString())
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = dayIndex.toString(),
-                                    color = if (enabled) Color.White else Color.Gray
-                                )
+                                }
+                                currentDay++
+                            } else {
+                                Box(modifier = Modifier.weight(1f))
                             }
-                        } else {
-                            Spacer(modifier = Modifier.size(40.dp))
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Selected date sessions
+            selectedDate?.let { date ->
+                val sessions = viewModel.getSessionsForDate(date)
+                if (sessions.isNotEmpty()) {
+                    Text(
+                        text = "Sessions for ${date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))}",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn {
+                        items(sessions) { session ->
+                            SessionCard(session = session)
+                        }
+                    }
+                }
+            }
+
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            error?.let { errorMessage ->
+                Text(
+                    text = errorMessage,
+                    color = Color.Red,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SessionCard(session: BookedSession) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+        ) {
+            Text(
+                text = session.courseName,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Tutor: ${session.tutorName}",
+                fontSize = 16.sp
+            )
+            Text(
+                text = "Time: ${session.dateTime}",
+                fontSize = 16.sp
+            )
+            Text(
+                text = "Cost: $${session.cost}",
+                fontSize = 16.sp
+            )
         }
     }
 }
