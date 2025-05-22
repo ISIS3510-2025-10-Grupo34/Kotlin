@@ -464,7 +464,12 @@ fun TutorProfileScreen(
             Divider(modifier = Modifier.padding(vertical = 8.dp))
         }
     } else {
-        Text("No reviews yet or not available due to internet connection.", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+        if (isStale) {
+            Text("No reviews available due to internet connection.", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+        } else {
+            Text("No reviews yet.", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+        }
+
     }
 }
 
