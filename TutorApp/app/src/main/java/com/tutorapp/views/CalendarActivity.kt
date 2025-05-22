@@ -71,6 +71,7 @@ fun CalendarScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val isOffline by viewModel.isOffline.collectAsState()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         Session.userid?.let { userId ->
@@ -173,7 +174,7 @@ fun CalendarScreen(
                                         .clip(CircleShape)
                                         .background(color)
                                         .clickable(enabled = sessionCount > 0) {
-                                            lifecycleScope.launch {
+                                            scope.launch {
                                                 viewModel.selectDateAndLoadSessions(date)
                                                 onDateSelected(date, sessionsForSelectedDate)
                                             }
