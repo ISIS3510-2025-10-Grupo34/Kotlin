@@ -31,6 +31,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.*
+import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.O)
 class CalendarActivity : ComponentActivity() {
@@ -172,8 +173,10 @@ fun CalendarScreen(
                                         .clip(CircleShape)
                                         .background(color)
                                         .clickable(enabled = sessionCount > 0) {
-                                            viewModel.selectDate(date)
-                                            onDateSelected(date, sessionsForSelectedDate)
+                                            lifecycleScope.launch {
+                                                viewModel.selectDateAndLoadSessions(date)
+                                                onDateSelected(date, sessionsForSelectedDate)
+                                            }
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
