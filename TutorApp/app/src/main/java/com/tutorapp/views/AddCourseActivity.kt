@@ -2,7 +2,11 @@
 
 package com.tutorapp.views
 
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -11,13 +15,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -26,6 +33,45 @@ import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.viewModels.AddCourseViewModel
 import java.time.*
 import java.time.format.DateTimeFormatter
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TimePickerDefaults
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+
+// Observer for network connectivity
+interface ConnectivityObserver {
+    fun observe(): Flow<Status>
+    enum class Status { Available, Unavailable }
+}
+
+class NetworkConnectivityObserver(context: Context) : ConnectivityObserver {
+    private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+    override fun observe(): Flow<ConnectivityObserver.Status> = callbackFlow {
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                trySend(ConnectivityObserver.Status.Available)
+            }
+            override fun onLost(network: Network) {
+                trySend(ConnectivityObserver.Status.Unavailable)
+            }
+        }
+        val request = NetworkCapabilities.TRANSPORT_CELLULAR // placeholder, will register all
+        connectivityManager.registerDefaultNetworkCallback(callback)
+        // emit initial status
+        val current = if (isCurrentlyConnected()) ConnectivityObserver.Status.Available else ConnectivityObserver.Status.Unavailable
+        trySend(current)
+        awaitClose { connectivityManager.unregisterNetworkCallback(callback) }
+    }.distinctUntilChanged()
+
+    private fun isCurrentlyConnected(): Boolean {
+        val network = connectivityManager.activeNetwork ?: return false
+        val caps = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+}
 
 data class UniversitySimple(val name: String, val id: Int)
 data class CourseSimple(val courseName: String, val id: Int)
@@ -37,6 +83,8 @@ class AddCourseActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val currentUserInfo: LoginTokenDecoded? = intent.getParcelableExtra("TOKEN_KEY")
+        val observer = NetworkConnectivityObserver(applicationContext)
+        val connectivityFlow = observer.observe()
 
         addCourseViewModel.getSearchResults { success, data ->
             val universities = data?.data?.map { (uniName, uni) ->
@@ -49,13 +97,46 @@ class AddCourseActivity : ComponentActivity() {
                 }
             } ?: emptyMap()
 
+            val customColorScheme = lightColorScheme(
+
+                primary = Color(0xFF192650), // Main brand color
+                onPrimary = Color.White, // Text/icon on primary
+                primaryContainer = Color(0xFFE1E5F2), // Lighter shade for container
+                onPrimaryContainer = Color(0xFF192650), // Text/icon on primary container
+
+                secondary= Color(0xFF4A90E2), // Secondary color (less prominent)
+                onSecondary= Color.White, // Text/icon on secondary
+                secondaryContainer= Color(0xFFD1E7FF), // Lighter shade for container
+                onSecondaryContainer = Color(0xFF4A90E2), // Text/icon on secondary container
+
+                tertiary= Color(0xFF51C3B3), // Tertiary contrasting color
+                onTertiary= Color.White, // Text/icon on tertiary
+                tertiaryContainer= Color(0xFFE6F6F4), // Lighter shade for container
+                onTertiaryContainer= Color(0xFF51C3B3), // Text/icon on tertiary container
+
+                background= Color(0xFFF5F5F5), // Background color
+                onBackground= Color.Black, // Text/icon on background
+
+                surface= Color.White, // Surface color for cards, etc.
+                onSurface= Color.Black, // Text/icon on surface
+
+                error= Color.Red, // Error color
+                onError= Color.White, // Text/icon on error
+            )
+
             setContent {
-                AddCourseScreen(
-                    viewModel = addCourseViewModel,
-                    universities = universities,
-                    coursesByUniversity = coursesByUniversity,
-                    currentUserInfo = currentUserInfo
-                )
+                MaterialTheme(
+                    colorScheme = customColorScheme
+                ) {
+                    // Tu pantalla o Composable aquí
+                    AddCourseScreen(
+                        viewModel = addCourseViewModel,
+                        universities = universities,
+                        coursesByUniversity = coursesByUniversity,
+                        currentUserInfo = currentUserInfo,
+                        connectivityStatusFlow = connectivityFlow
+                    )
+                }
             }
         }
     }
@@ -68,9 +149,16 @@ fun AddCourseScreen(
     viewModel: AddCourseViewModel,
     universities: List<UniversitySimple>,
     coursesByUniversity: Map<String, List<CourseSimple>>,
-    currentUserInfo: LoginTokenDecoded?
+    currentUserInfo: LoginTokenDecoded?,
+    connectivityStatusFlow: Flow<ConnectivityObserver.Status>
 ) {
     val context = LocalContext.current
+
+    // Define Colombia timezone once
+    val colombiaZone = ZoneId.of("America/Bogota")
+
+    val connectivityStatus by connectivityStatusFlow.collectAsState(initial = ConnectivityObserver.Status.Available)
+    val isConnected = connectivityStatus == ConnectivityObserver.Status.Available
 
     // --- Inicializar estados leyendo del cache ---
     var selectedUniversityName by remember {
@@ -93,6 +181,10 @@ fun AddCourseScreen(
     var formattedDateTime by remember {
         mutableStateOf(viewModel.getCachedInput("dateTime") ?: "")
     }
+
+    // Store selected date and time as ZonedDateTime to maintain timezone info
+    var selectedZonedDateTime by remember { mutableStateOf<ZonedDateTime?>(null) }
+
     var dateTimeError by remember { mutableStateOf<String?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -102,6 +194,22 @@ fun AddCourseScreen(
     // Menús desplegables
     var expandedUniversity by remember { mutableStateOf(false) }
     var expandedCourse by remember { mutableStateOf(false) }
+
+    // Initialize selectedZonedDateTime from cache if available
+    LaunchedEffect(Unit) {
+        if (formattedDateTime.isNotEmpty() && formattedDateTime.contains("-")) {
+            try {
+                val parts = formattedDateTime.split("-")
+                val datePart = parts[0]
+                val timePart = parts[1]
+                val localDate = LocalDate.parse(datePart, dateFormatter)
+                val localTime = LocalTime.parse(timePart, timeFormatter)
+                selectedZonedDateTime = ZonedDateTime.of(localDate, localTime, colombiaZone)
+            } catch (e: Exception) {
+                // Handle parse error if needed
+            }
+        }
+    }
 
     Column(modifier = Modifier.padding(16.dp)) {
         Text("TutorApp", style = MaterialTheme.typography.headlineLarge)
@@ -122,13 +230,16 @@ fun AddCourseScreen(
         ) {
             OutlinedTextField(
                 value = selectedUniversityName,
-                onValueChange = { /* readOnly */ },
-                label = { Text("University") },
+                onValueChange = {},
+                label = { Text("University", color = Color(0xFF192650)) },
+                placeholder = { Text("Select university", color = Color.Gray) },
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedUniversity) },
-                modifier = Modifier
-                    .menuAnchor()      // ← aquí
-                    .fillMaxWidth()
+                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedBorderColor = Color(0xFF192650),
+                    unfocusedBorderColor = Color(0xFF192650)
+                )
             )
 
             ExposedDropdownMenu(
@@ -137,18 +248,17 @@ fun AddCourseScreen(
             ) {
                 universities.forEach { uni ->
                     DropdownMenuItem(
-                        text = { Text(uni.name) },
+                        text = { Text(uni.name, color= Color(0xFF192650)) },
                         onClick = {
-                            selectedUniversityName = uni.name
-                            selectedUniversityId = uni.id
+                            selectedUniversityName= uni.name
+                            selectedUniversityId= uni.id
                             viewModel.cacheInput("universityName", uni.name)
                             viewModel.cacheInput("universityId", uni.id.toString())
-                            // reset curso
-                            selectedCourseName = ""
-                            selectedCourseId = -1
+                            selectedCourseName= ""
+                            selectedCourseId= -1
                             viewModel.cacheInput("courseName", "")
                             viewModel.cacheInput("courseId", "")
-                            expandedUniversity = false
+                            expandedUniversity= false
                         }
                     )
                 }
@@ -192,6 +302,15 @@ fun AddCourseScreen(
             }
         }
 
+        // Message if estimator is not available
+        if (selectedUniversityId == -1 ) {
+            Text(
+                text = "A university must be selected first to see the available courses.",
+                style=
+                    MaterialTheme.typography.bodyMedium
+            )
+        }
+
         Spacer(Modifier.height(16.dp))
         // --- Precio ---
         OutlinedTextField(
@@ -222,9 +341,25 @@ fun AddCourseScreen(
                     }
                 }
             },
-            enabled = selectedUniversityId != -1
+            enabled = selectedUniversityId != -1 && isConnected
         ) {
             Text("Use the estimator")
+        }
+
+        // Message if estimator is not available
+        if (selectedUniversityId == -1  && isConnected) {
+            Text(
+                text = "A university must be selected first to use the estimator.",
+                style=
+                    MaterialTheme.typography.bodyMedium
+            )
+        }
+        if (!isConnected) {
+            Text(
+                text = "The estimator is not available without internet, but you can enter price manually.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
 
         Spacer(Modifier.height(16.dp))
@@ -242,7 +377,7 @@ fun AddCourseScreen(
                         contentDescription = "Seleccionar fecha y hora"
                     )
                 }
-            }, // ← ¡aquí va la coma!
+            },
             modifier = Modifier.fillMaxWidth()
         )
         dateTimeError?.let {
@@ -257,10 +392,17 @@ fun AddCourseScreen(
                 confirmButton = {
                     TextButton(onClick = {
                         picker.selectedDateMillis?.let { ms ->
-                            val ld = Instant.ofEpochMilli(ms)
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalDate()
-                            formattedDateTime = "${ld.format(dateFormatter)}-"
+                            // 1. Creamos un Instant a partir del millis
+                            val instant = Instant.ofEpochMilli(ms)
+                            // 2. Extraemos el LocalDate en UTC (así no hay shift)
+                            val localDateUtc = instant.atZone(ZoneOffset.UTC).toLocalDate()
+                            // 3. Creamos el ZonedDateTime a la medianoche en Bogotá
+                            val zonedStartOfDay = localDateUtc.atStartOfDay(colombiaZone)
+
+                            // Almacenamos para luego ajustar la hora
+                            selectedZonedDateTime = zonedStartOfDay
+
+                            // Mostramos el time picker
                             showTimePicker = true
                         }
                         showDatePicker = false
@@ -277,6 +419,7 @@ fun AddCourseScreen(
                 DatePicker(state = picker)
             }
         }
+
         // TimePickerDialog
         if (showTimePicker) {
             val tp = rememberTimePickerState(is24Hour = true)
@@ -284,24 +427,23 @@ fun AddCourseScreen(
                 onDismissRequest = { showTimePicker = false },
                 confirmButton = {
                     TextButton(onClick = {
-                        // 1) Armar el string
-                        val parts = formattedDateTime.split("-")
-                        val datePart = parts[0]
-                        formattedDateTime = "$datePart-${String.format("%02d:%02d", tp.hour, tp.minute)}"
+                        // Update the ZonedDateTime with selected time
+                        selectedZonedDateTime = selectedZonedDateTime?.withHour(tp.hour)?.withMinute(tp.minute)
 
-                        // 2) Validar (si quieres)
-                        val selectedDT = LocalDateTime.parse(
-                            formattedDateTime,
-                            DateTimeFormatter.ofPattern("dd/MM/yyyy-HH:mm")
-                        )
-                        val now = ZonedDateTime.now(ZoneId.of("GMT-5")).toLocalDateTime()
-                        dateTimeError = if (selectedDT.isBefore(now)) {
-                            "Cannot select past date/time."
-                        } else null
+                        // Format for display and persistence
+                        selectedZonedDateTime?.let { zdt ->
+                            formattedDateTime = "${zdt.format(dateFormatter)}-${zdt.format(timeFormatter)}"
 
-                        // 3) **Guardar en el cache**
-                        if (dateTimeError == null) {
-                            viewModel.cacheInput("dateTime", formattedDateTime)
+                            // Validation using ZonedDateTime for correct timezone comparison
+                            val now = ZonedDateTime.now(colombiaZone)
+                            dateTimeError = if (zdt.isBefore(now)) {
+                                "Cannot select past date/time."
+                            } else null
+
+                            // Save to cache if valid
+                            if (dateTimeError == null) {
+                                viewModel.cacheInput("dateTime", formattedDateTime)
+                            }
                         }
 
                         showTimePicker = false
@@ -310,25 +452,63 @@ fun AddCourseScreen(
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showTimePicker = false }) {
+                    TextButton(onClick = {
+                        // Clear formattedDateTime if time not selected
+                        formattedDateTime = ""
+                        selectedZonedDateTime = null
+                        showTimePicker = false
+                    }) {
                         Text("Cancel")
                     }
                 }
             ) {
-                TimePicker(state = tp)
+                // Usar TimePicker directamente con los colores personalizados
+                TimePicker(
+                    state = tp,
+                    colors = TimePickerDefaults.colors(
+                        // Colores principales para los números grandes
+                        timeSelectorSelectedContainerColor = Color(0xFF192650),
+                        timeSelectorUnselectedContainerColor = Color.White,
+                        timeSelectorSelectedContentColor = Color.White,
+                        timeSelectorUnselectedContentColor = Color(0xFF192650),
+
+                        // Colores para el selector de hora
+                        clockDialColor = Color(0xFFE1E5F2),
+                        clockDialSelectedContentColor = Color.White,
+                        clockDialUnselectedContentColor = Color(0xFF192650),
+                        selectorColor = Color(0xFF192650),
+
+                        // Colores para selector AM/PM (si lo usas)
+                        periodSelectorSelectedContainerColor = Color(0xFF192650),
+                        periodSelectorUnselectedContainerColor = Color(0xFFE1E5F2),
+                        periodSelectorSelectedContentColor = Color.White,
+                        periodSelectorUnselectedContentColor = Color(0xFF192650),
+
+                        // Color del contenedor general
+                        containerColor = Color.White
+                    )
+                )
             }
         }
 
         Spacer(Modifier.height(24.dp))
-        // --- Guardar sesión ---
         Button(
             onClick = {
                 when {
                     selectedUniversityId == -1 -> Toast.makeText(context, "Select university", Toast.LENGTH_SHORT).show()
                     selectedCourseId == -1 -> Toast.makeText(context, "Select course", Toast.LENGTH_SHORT).show()
                     priceState.isEmpty() -> Toast.makeText(context, "Set price", Toast.LENGTH_SHORT).show()
-                    formattedDateTime.isEmpty() -> Toast.makeText(context, "Select date/time", Toast.LENGTH_SHORT).show()
+                    formattedDateTime.isEmpty() || !formattedDateTime.contains("-") || formattedDateTime.endsWith("-") -> Toast.makeText(context, "Select date/time", Toast.LENGTH_SHORT).show()
                     dateTimeError != null -> Toast.makeText(context, dateTimeError, Toast.LENGTH_SHORT).show()
+                    !isConnected -> {
+                        currentUserInfo?.let { user ->
+                            context.startActivity(
+                                Intent(context, TutorProfileActivity::class.java)
+                                    .putExtra("TOKEN_KEY", user)
+                            )
+                        }
+                        return@Button // <-- Early return, skip postTutoringSession
+                    }
                     else -> {
                         currentUserInfo?.let { user ->
                             viewModel.postTutoringSession(
@@ -339,9 +519,7 @@ fun AddCourseScreen(
                             ) { ok, _ ->
                                 if (ok) {
                                     Toast.makeText(context, "Tutoring created!", Toast.LENGTH_SHORT).show()
-                                    // limpiar cache
                                     viewModel.clearCache()
-                                    // navegar
                                     context.startActivity(
                                         Intent(context, TutorProfileActivity::class.java)
                                             .putExtra("TOKEN_KEY", user)
@@ -352,14 +530,23 @@ fun AddCourseScreen(
                     }
                 }
             },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF192650)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Save")
         }
+        if (!isConnected) {
+            Text(
+                text = "You are offline: the session will not be published but your input is will be saved as long as the application is open.",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 4.dp),
+                color = MaterialTheme.colorScheme.error
+            )
+        }
     }
 }
 
-// Reusa tu TimePickerDialog
+// Versión mejorada de tu TimePickerDialog con mejor contraste
 @Composable
 fun TimePickerDialog(
     onDismissRequest: () -> Unit,
@@ -371,6 +558,57 @@ fun TimePickerDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = confirmButton,
         dismissButton = dismissButton,
-        text = { content() }
+        text = {
+            // Wrapping content in a custom theme to override time picker colors
+            TimePickerTheme {
+                content()
+            }
+        },
+        containerColor = Color.White
+    )
+}
+
+// Tema personalizado para el TimePicker usando MaterialTheme
+@Composable
+private fun TimePickerTheme(content: @Composable () -> Unit) {
+    // En lugar de usar CompositionLocalProvider con LocalTimePickerColors,
+    // usamos un MaterialTheme con colorScheme personalizado
+    MaterialTheme(
+        colorScheme = MaterialTheme.colorScheme.copy(
+            primary = Color(0xFF192650),
+            onPrimary = Color.White,
+            surface = Color.White,
+            onSurface = Color(0xFF192650),
+            surfaceVariant = Color(0xFFE1E5F2),
+            onSurfaceVariant = Color(0xFF192650)
+        )
+    ) {
+        content()
+    }
+}
+
+// Añade esta función actualizada donde utilizas el TimePicker
+@Composable
+fun CustomTimePicker(state: TimePickerState) {
+    TimePicker(
+        state = state,
+        colors = TimePickerDefaults.colors(
+            // Estos colores afectan a los dígitos principales en la parte superior
+            clockDialColor = Color(0xFFE1E5F2),
+            clockDialSelectedContentColor = Color.White,
+            clockDialUnselectedContentColor = Color(0xFF192650),
+            selectorColor = Color(0xFF192650),
+            containerColor = Color.White,
+            periodSelectorSelectedContainerColor = Color(0xFF192650),
+            periodSelectorUnselectedContainerColor = Color(0xFFE1E5F2),
+            periodSelectorSelectedContentColor = Color.White,
+            periodSelectorUnselectedContentColor = Color(0xFF192650),
+
+            // Estos afectan directamente a los números grandes en la parte superior
+            timeSelectorSelectedContainerColor = Color(0xFF192650),
+            timeSelectorUnselectedContainerColor = Color.White,
+            timeSelectorSelectedContentColor = Color.White,
+            timeSelectorUnselectedContentColor = Color(0xFF192650)
+        )
     )
 }
