@@ -69,6 +69,7 @@ fun CalendarScreen(
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     val selectedDate by viewModel.selectedDate.collectAsState()
     val bookedSessions by viewModel.bookedSessions.collectAsState()
+    val sessionsForSelectedDate by viewModel.sessionsForSelectedDate.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val isOffline by viewModel.isOffline.collectAsState()
@@ -174,8 +175,8 @@ fun CalendarScreen(
                                         .clip(CircleShape)
                                         .background(color)
                                         .clickable(enabled = sessionCount > 0) {
-                                            val sessions = viewModel.getSessionsForDate(date)
-                                            onDateSelected(date, sessions)
+                                            viewModel.selectDate(date)
+                                            onDateSelected(date, sessionsForSelectedDate)
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -197,8 +198,7 @@ fun CalendarScreen(
 
             // Selected date sessions
             selectedDate?.let { date ->
-                val sessions = viewModel.getSessionsForDate(date)
-                if (sessions.isNotEmpty()) {
+                if (sessionsForSelectedDate.isNotEmpty()) {
                     Text(
                         text = "Sessions for ${date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))}",
                         fontSize = 18.sp,
@@ -206,7 +206,7 @@ fun CalendarScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     LazyColumn {
-                        items(sessions) { session ->
+                        items(sessionsForSelectedDate) { session ->
                             SessionCard(session = session)
                         }
                     }

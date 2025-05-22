@@ -40,6 +40,9 @@ class CalendarViewModel(
     private val _isOffline = MutableStateFlow(false)
     val isOffline: StateFlow<Boolean> = _isOffline.asStateFlow()
 
+    private val _sessionsForSelectedDate = MutableStateFlow<List<BookedSession>>(emptyList())
+    val sessionsForSelectedDate: StateFlow<List<BookedSession>> = _sessionsForSelectedDate.asStateFlow()
+
     fun loadBookedSessions(userId: Int) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -98,20 +101,34 @@ class CalendarViewModel(
 
     fun selectDate(date: LocalDate) {
         _selectedDate.value = date
+        viewModelScope.launch {
+            loadSessionsForDate(date)
+        }
     }
 
-    fun getSessionsForDate(date: LocalDate): List<BookedSession> {
+    private suspend fun loadSessionsForDate(date: LocalDate) {
         // First try to get from cache
-        BookedSessionCache.get(date)?.let { return it }
+        BookedSessionCache.get(date)?.let {
+            _sessionsForSelectedDate.value = it
+            return
+        }
 
         // If not in cache, get from Room database
         val datePattern = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-        val sessions = bookedSessionDao.getSessionsForDate(datePattern)
-        return mapEntitiesToDomain(sessions)
+        val sessions = withContext(Dispatchers.IO) {
+            bookedSessionDao.getSessionsForDate(datePattern)
+        }
+        _sessionsForSelectedDate.value = mapEntitiesToDomain(sessions)
     }
 
     fun getSessionCountForDate(date: LocalDate): Int {
-        return getSessionsForDate(date).size
+        return _bookedSessions.value.count { session ->
+            val sessionDate = LocalDateTime.parse(
+                session.dateTime,
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+            ).toLocalDate()
+            sessionDate == date
+        }
     }
 
     fun getMaxSessionsInMonth(): Int {
