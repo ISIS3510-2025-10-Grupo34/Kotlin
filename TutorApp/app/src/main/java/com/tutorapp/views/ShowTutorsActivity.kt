@@ -477,35 +477,43 @@ fun TutorCard(modifier: Modifier, tutoringSession: TutoringSession, token: Strin
 
         // Button
         Button(
-            onClick = {
-                if(showTutorsViewModel.isNetworkAvailable()){
-                    showTutorsViewModel.bookingTime()
-                    val prefs = context.getSharedPreferences("timeToBookPrefs", Context.MODE_PRIVATE)
-                    val startTime = prefs.getLong("timeToBookStart", 0L)
-                    if (startTime != 0L) {
-                        val timeToBook = System.currentTimeMillis() - startTime
-                        showTutorsViewModel.postTimeToBook(timeToBook.toFloat(), tutoringSession.tutor_id.toInt())
-                        prefs.edit().remove("timeToBookStart").apply()
-                    }
+            onClick = onClick@{
+                val userId = Session.userid ?: return@onClick  // Asegúrate de tener el ID
 
-                    val url = "https://wa.me/57"+tutoringSession.tutor_phone_number
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-
-                    try {
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        // Opcional: Manejar excepción si no hay app para abrir el link
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Could not open link.")
+                showTutorsViewModel.bookTutoringSession(userId.toInt(), tutoringSession.id) { success, message ->
+                    if (success) {
+                        showTutorsViewModel.bookingTime()
+                        val prefs = context.getSharedPreferences("timeToBookPrefs", Context.MODE_PRIVATE)
+                        val startTime = prefs.getLong("timeToBookStart", 0L)
+                        if (startTime != 0L) {
+                            val timeToBook = System.currentTimeMillis() - startTime
+                            showTutorsViewModel.postTimeToBook(timeToBook.toFloat(), tutoringSession.tutor_id.toInt())
+                            prefs.edit().remove("timeToBookStart").apply()
                         }
-                        Log.e("TutorCard", "Error opening WhatsApp link", e)
+
+                        showTutorsViewModel.fetchTutorPhoneNumber(tutoringSession.tutor_id.toInt(), sessionId = tutoringSession.id) { phoneNumber ->
+                            if (phoneNumber != null) {
+                                val url = "https://wa.me/57$phoneNumber"
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                try {
+                                    context.startActivity(intent)
+                                    showTutorsViewModel.loadInitialSessions()
+                                } catch (e: Exception) {
+                                    scope.launch { snackbarHostState.showSnackbar("Could not open WhatsApp.") }
+                                }
+                            } else {
+                                scope.launch { snackbarHostState.showSnackbar("Could not fetch tutor's phone number.") }
+                            }
+                        }
+
+                    } else {
+                        scope.launch { snackbarHostState.showSnackbar("Booking failed: $message") }
                     }
-                }else{
-                    /*scope.launch {
-                        snackbarHostState.showSnackbar("No internet connection") // Mensaje en inglés
-                    }*/
                 }
-            },
+
+
+            }
+            ,
             modifier = Modifier.align(Alignment.End),
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247))

@@ -8,7 +8,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit // Import TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "http://192.168.1.7:8000/api/" // Ensure this is accessible from your device/emulator
+    private const val BASE_URL = "http://192.168.1.7:8000/api/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

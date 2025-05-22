@@ -45,6 +45,10 @@ interface TutoringSessionDao {
     @Query("SELECT * FROM tutoring_sessions WHERE student IS NULL ORDER BY date_time DESC")
     suspend fun getAvailableSessions(): List<TutoringSessionEntity> // suspend indica que es para coroutines
 
+
+    @Query("UPDATE tutoring_sessions SET tutor_phone_number = :phoneNumber WHERE id = :sessionId")
+    suspend fun updateTutorPhoneNumber(sessionId: Int, phoneNumber: String)
+
     /**
      * Inserta una lista de sesiones de tutoría en la base de datos.
      * Gracias a OnConflictStrategy.REPLACE, si una sesión con el mismo 'id'

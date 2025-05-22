@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.*
 import com.tutorapp.data.TutoringSessionDao
 import com.tutorapp.data.TutoringSessionEntity
+import com.tutorapp.models.BookTutoringSessionRequest
 import com.tutorapp.models.TutoringSession
 import com.tutorapp.models.PostFilterCounterIncreaseRequest
 import com.tutorapp.models.PostTimeToBookRequest
@@ -51,10 +52,21 @@ class ShowTutorsViewModel(
                 }
                 val cachedDomainSessions = mapEntitiesToDomain(cachedEntities)
                 sessions = cachedDomainSessions
+
                 Log.i("ViewModel", "Cache Load: Loaded ${cachedDomainSessions.size} sessions from Room. Data is initially STALE.")
 
+                // 👉 Actualiza números faltantes si hay internet
                 if (isNetworkAvailable()) {
-                    Log.d("ViewModel", "Network available. Attempting refresh...")
+                    cachedDomainSessions.forEach { session ->
+                        if (session.tutor_phone_number.isBlank()) {
+                            fetchTutorPhoneNumber(session.tutor_id.toInt(), session.id) { phone ->
+                                // Nada más que hacer, ya se guarda en Room dentro de fetchTutorPhoneNumber
+                                Log.d("ViewModel", "Phone updated for session ${session.id}: $phone")
+                            }
+                        }
+                    }
+
+                    // También refresca desde backend
                     try {
                         val response = RetrofitClient.instance.tutoringSessions()
                         if (response.isSuccessful) {
@@ -69,7 +81,6 @@ class ShowTutorsViewModel(
                             sessions = networkSessions
                             isStale = false
                             Log.i("ViewModel", "Network Refresh: Success. Loaded ${networkSessions.size}. Data is FRESH.")
-
                         } else {
                             Log.e("ViewModel", "Network Refresh: API error ${response.code()}. Data remains STALE.")
                         }
@@ -88,6 +99,7 @@ class ShowTutorsViewModel(
             }
         }
     }
+
 
     suspend fun onFilterClick(university: String, course: String, professor: String) {
         val isFiltering = university.isNotEmpty() || course.isNotEmpty() || professor.isNotEmpty()
@@ -201,4 +213,49 @@ class ShowTutorsViewModel(
             }
         }
     }
+
+    fun bookTutoringSession(userId: Int, tutoringSessionId: Int, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val request = BookTutoringSessionRequest(userId, tutoringSessionId)
+                val response = RetrofitClient.instance.bookTutoringSession(request)
+                if (response.isSuccessful) {
+                    val message = response.body()?.message ?: "Booking successful"
+                    onResult(true, message)
+                    Log.i("Booking", message)
+                } else {
+                    val errorMsg = response.errorBody()?.string() ?: "Unknown error"
+                    onResult(false, errorMsg)
+                    Log.e("Booking", "Failed: $errorMsg")
+                }
+            } catch (e: Exception) {
+                onResult(false, "Network error: ${e.message}")
+                Log.e("Booking", "Exception: ${e.message}")
+            }
+        }
+    }
+
+
+    fun fetchTutorPhoneNumber(tutorId: Int, sessionId: Int, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.instance.getTutorProfile(tutorId)
+                if (response.isSuccessful) {
+                    val number = response.body()?.data?.whatsappContact
+                    if (number != null) {
+                        withContext(Dispatchers.IO) {
+                            tutoringSessionDao.updateTutorPhoneNumber(sessionId, number)
+                        }
+                    }
+                    onResult(number)
+                } else {
+                    onResult(null)
+                }
+            } catch (e: Exception) {
+                onResult(null)
+            }
+        }
+    }
+
+
 }
