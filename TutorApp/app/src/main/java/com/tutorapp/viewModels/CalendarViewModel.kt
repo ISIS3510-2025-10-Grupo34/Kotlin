@@ -99,18 +99,16 @@ class CalendarViewModel(
         }
     }
 
-    fun selectDate(date: LocalDate) {
+    suspend fun selectDateAndLoadSessions(date: LocalDate): List<BookedSession> {
         _selectedDate.value = date
-        viewModelScope.launch {
-            loadSessionsForDate(date)
-        }
+        return loadSessionsForDate(date)
     }
 
-    private suspend fun loadSessionsForDate(date: LocalDate) {
+    private suspend fun loadSessionsForDate(date: LocalDate): List<BookedSession> {
         // First try to get from cache
         BookedSessionCache.get(date)?.let {
             _sessionsForSelectedDate.value = it
-            return
+            return it
         }
 
         // If not in cache, get from Room database
@@ -118,7 +116,9 @@ class CalendarViewModel(
         val sessions = withContext(Dispatchers.IO) {
             bookedSessionDao.getSessionsForDate(datePattern)
         }
-        _sessionsForSelectedDate.value = mapEntitiesToDomain(sessions)
+        val domainSessions = mapEntitiesToDomain(sessions)
+        _sessionsForSelectedDate.value = domainSessions
+        return domainSessions
     }
 
     fun getSessionCountForDate(date: LocalDate): Int {

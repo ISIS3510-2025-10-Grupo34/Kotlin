@@ -9,10 +9,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudOff
@@ -189,25 +186,6 @@ fun CalendarScreen(
                             } else {
                                 Box(modifier = Modifier.weight(1f))
                             }
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Selected date sessions
-            selectedDate?.let { date ->
-                if (sessionsForSelectedDate.isNotEmpty()) {
-                    Text(
-                        text = "Sessions for ${date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))}",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LazyColumn {
-                        items(sessionsForSelectedDate) { session ->
-                            SessionCard(session = session)
                         }
                     }
                 }
