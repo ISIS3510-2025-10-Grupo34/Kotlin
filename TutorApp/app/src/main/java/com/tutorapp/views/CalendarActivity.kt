@@ -26,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tutorapp.models.BookedSession
-import com.tutorapp.util.Session
 import com.tutorapp.viewModels.CalendarViewModel
 import java.time.LocalDate
 import java.time.YearMonth
@@ -68,7 +67,7 @@ fun CalendarScreen(
     val error by viewModel.error.collectAsState()
 
     LaunchedEffect(Unit) {
-        Session.userId?.toIntOrNull()?.let { userId ->
+        Session.userid?.let { userId ->
             viewModel.loadBookedSessions(userId)
         }
     }
@@ -218,36 +217,3 @@ fun CalendarScreen(
     }
 }
 
-@Composable
-fun SessionCard(session: BookedSession) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-        ) {
-            Text(
-                text = session.courseName,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Tutor: ${session.tutorName}",
-                fontSize = 16.sp
-            )
-            Text(
-                text = "Time: ${session.dateTime}",
-                fontSize = 16.sp
-            )
-            Text(
-                text = "Cost: $${session.cost}",
-                fontSize = 16.sp
-            )
-        }
-    }
-}
