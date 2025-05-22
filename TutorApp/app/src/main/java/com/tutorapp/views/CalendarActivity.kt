@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tutorapp.models.BookedSession
-import com.tutorapp.util.Session
 import com.tutorapp.viewModels.CalendarViewModel
 import java.time.LocalDate
 import java.time.YearMonth
@@ -56,7 +55,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
     val error by viewModel.error.collectAsState()
 
     LaunchedEffect(Unit) {
-        Session.userId?.toIntOrNull()?.let { userId ->
+        Session.userid?.let { userId ->
             viewModel.loadBookedSessions(userId)
         }
     }
