@@ -79,7 +79,8 @@ import androidx.compose.runtime.LaunchedEffect
 import android.net.ConnectivityManager 
 import android.net.Network 
 import android.net.NetworkCapabilities 
-import android.net.NetworkRequest 
+import android.net.NetworkRequest
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.ui.text.style.TextAlign
@@ -249,8 +250,7 @@ fun ShowTutorsScreen(modifier: Modifier, showTutorsViewModel: ShowTutorsViewMode
 
 
 @Composable
-fun TutorScreenHeader(modifier: Modifier,token: String) {
-
+fun TutorScreenHeader(modifier: Modifier, token: String) {
     val context = LocalContext.current
 
     Row(
@@ -267,29 +267,49 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
             fontWeight = FontWeight.Bold
         )
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(25.dp) // Espacio uniforme entre iconos
-        ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(25.dp)) {
+            // Calendario
             IconButton(
                 onClick = {
+                    val jsonToken = JSONObject(token)
+                    val id = jsonToken.get("id").toString()
 
+                    val intent = Intent(context, CalendarActivity::class.java).apply {
+                        putExtra("ID", id)
+                    }
+                    context.startActivity(intent)
+                },
+                modifier = Modifier
+                    .size(35.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF192650))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarToday,
+                    contentDescription = "Calendar",
+                    tint = Color.White
+                )
+            }
+
+            // Notificaciones
+            IconButton(
+                onClick = {
                     val jsonToken = JSONObject(token)
                     val role = jsonToken.get("role").toString()
                     val id = jsonToken.get("id").toString()
 
                     val intent = Intent(
                         context,
-                        if(role == "tutor")ConnectWithStudentsActivity::class.java else NotificationCenterActivity::class.java
-
+                        if (role == "tutor") ConnectWithStudentsActivity::class.java
+                        else NotificationCenterActivity::class.java
                     ).apply {
                         putExtra("ID", id)
                     }
 
                     context.startActivity(intent)
-                }
-                ,
+                },
                 modifier = Modifier
-                    .size(35.dp) // Tamaño más visible
+                    .size(35.dp)
                     .clip(CircleShape)
                     .background(Color(0xFF192650))
             ) {
@@ -300,14 +320,17 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
                 )
             }
 
+            // Perfil
             IconButton(
-                onClick = {val jsonToken = JSONObject(token)
+                onClick = {
+                    val jsonToken = JSONObject(token)
                     val role = jsonToken.get("role").toString()
                     val id = jsonToken.get("id").toString()
 
                     val intent = Intent(
                         context,
-                        if (role == "tutor") TutorProfileActivity::class.java else StudentProfileActivity::class.java
+                        if (role == "tutor") TutorProfileActivity::class.java
+                        else StudentProfileActivity::class.java
                     ).apply {
                         putExtra("ID", id)
                     }
@@ -328,6 +351,7 @@ fun TutorScreenHeader(modifier: Modifier,token: String) {
         }
     }
 }
+
 
 
 
