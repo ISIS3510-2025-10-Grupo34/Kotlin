@@ -6,7 +6,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    private const val BASE_URL = "http://192.168.5.109:8000/api/"
+    private const val BASE_URL = "http://Tutorapp-env-1.eba-3gbpmybu.us-east-1.elasticbeanstalk.com/api/"
 
     // Configura el interceptor para imprimir el body de las solicitudes y respuestas
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
