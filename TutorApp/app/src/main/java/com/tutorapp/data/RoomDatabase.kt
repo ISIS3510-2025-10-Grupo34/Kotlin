@@ -18,11 +18,10 @@ import androidx.room.TypeConverters
         DraftReviewEntity::class,
         TutoringSessionEntity::class,
         CachedNotificationEntity::class,
-        StudentProfileEntity::class
-
-
+        StudentProfileEntity::class,
+        BookedSessionEntity::class
     ],
-    version = 5
+    version = 6
 )
 
 abstract class AppDatabase : RoomDatabase() {
@@ -34,6 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tutoringSessionDao(): TutoringSessionDao
     abstract fun cachedNotificationDao(): CachedNotificationDao
     abstract fun studentProfileDao(): StudentProfileDao
+    abstract fun bookedSessionDao(): BookedSessionDao
 
 
 

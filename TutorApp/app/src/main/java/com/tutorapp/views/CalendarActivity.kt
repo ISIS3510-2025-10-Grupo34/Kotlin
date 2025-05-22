@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tutorapp.models.BookedSession
 import com.tutorapp.viewModels.CalendarViewModel
+import com.tutorapp.viewModels.CalendarViewModelFactory
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -39,7 +41,11 @@ class CalendarActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
+                val viewModel: CalendarViewModel = viewModel(
+                    factory = CalendarViewModelFactory.provideFactory(application)
+                )
                 CalendarScreen(
+                    viewModel = viewModel,
                     onDateSelected = { date, sessions ->
                         val intent = Intent(this, SessionsListActivity::class.java).apply {
                             putExtra("DATE", date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
@@ -57,7 +63,7 @@ class CalendarActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
-    viewModel: CalendarViewModel = viewModel(),
+    viewModel: CalendarViewModel,
     onDateSelected: (LocalDate, List<BookedSession>) -> Unit
 ) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
@@ -65,6 +71,7 @@ fun CalendarScreen(
     val bookedSessions by viewModel.bookedSessions.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val isOffline by viewModel.isOffline.collectAsState()
 
     LaunchedEffect(Unit) {
         Session.userid?.let { userId ->
@@ -79,6 +86,15 @@ fun CalendarScreen(
                 navigationIcon = {
                     IconButton(onClick = { /* TODO: Handle back navigation */ }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (isOffline) {
+                        Icon(
+                            Icons.Default.CloudOff,
+                            contentDescription = "Offline Mode",
+                            tint = Color.Gray
+                        )
                     }
                 }
             )
