@@ -19,7 +19,7 @@ data class TutoringSessionEntity(
     // Campos correspondientes al modelo TutoringSession
     val tutor: String,
     val tutor_id: String,         // Se mantiene como String igual que en el modelo original
-    val tutor_phone_number: String,
+    val tutor_phone: String,
     val university: String,
     val course: String,
     val cost: Double,
@@ -46,7 +46,7 @@ interface TutoringSessionDao {
     suspend fun getAvailableSessions(): List<TutoringSessionEntity> // suspend indica que es para coroutines
 
 
-    @Query("UPDATE tutoring_sessions SET tutor_phone_number = :phoneNumber WHERE id = :sessionId")
+    @Query("UPDATE tutoring_sessions SET tutor_phone = :phoneNumber WHERE id = :sessionId")
     suspend fun updateTutorPhoneNumber(sessionId: Int, phoneNumber: String)
 
     /**

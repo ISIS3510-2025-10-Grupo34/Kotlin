@@ -44,6 +44,7 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.CalendarToday
 import com.tutorapp.data.AppDatabase
 import com.tutorapp.data.TutorProfileViewModelFactory
 import com.tutorapp.remote.NetworkUtils
@@ -206,7 +207,7 @@ fun TutorProfileContent(
 
 
 @Composable
-fun TutorProfileHeader(modifier: Modifier) {
+fun TutorProfileHeader(modifier: Modifier, currentUserInfo: LoginTokenDecoded?) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     Row(
@@ -224,7 +225,7 @@ fun TutorProfileHeader(modifier: Modifier) {
             color = Color(0xFF192650) // Using your primary color
         )
         Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp) // Adjusted spacing
+            horizontalArrangement = Arrangement.spacedBy(24.dp) // Adjusted spacing
         ) {
             // Assuming Session.role and Session.userid are accessible Session management variables
             // For production, these should come from a ViewModel or a secure source.
@@ -252,6 +253,26 @@ fun TutorProfileHeader(modifier: Modifier) {
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = "Notifications",
+                        tint = Color.White
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        val intent =
+                            Intent(context, BookedSessionsActivity::class.java).apply {
+                                putExtra("TOKEN_KEY", currentUserInfo)
+                            }
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier
+                        .size(30.dp) // Slightly larger for better tap target
+                        .clip(CircleShape)
+                        .background(Color(0xFF192650))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = "Booked sessions",
                         tint = Color.White
                     )
                 }
@@ -346,7 +367,7 @@ fun TutorProfileScreen(
         )
     }
 
-    TutorProfileHeader(modifier = Modifier.height(IntrinsicSize.Min)) // Pass relevant info if needed
+    TutorProfileHeader(modifier = Modifier.height(IntrinsicSize.Min), currentUserInfo) // Pass relevant info if needed
     Spacer(modifier = Modifier.height(16.dp))
 
     // Profile Picture & Info
