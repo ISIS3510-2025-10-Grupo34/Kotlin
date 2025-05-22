@@ -4,7 +4,7 @@ data class TutoringSession(
     val id: Int,
     val tutor: String,
     val tutor_id: String,
-    val tutor_phone_number: String,
+    val tutor_phone: String,
     val course: String,
     val university: String,
     val cost: Double,
