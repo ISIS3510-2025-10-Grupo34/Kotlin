@@ -3,6 +3,8 @@ package com.tutorapp.viewModels
 import android.app.Application
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.tutorapp.data.BookedSessionCache
@@ -43,6 +45,7 @@ class CalendarViewModel(
     private val _sessionsForSelectedDate = MutableStateFlow<List<BookedSession>>(emptyList())
     val sessionsForSelectedDate: StateFlow<List<BookedSession>> = _sessionsForSelectedDate.asStateFlow()
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun loadBookedSessions(userId: Int) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -98,12 +101,13 @@ class CalendarViewModel(
             }
         }
     }
-
+    @RequiresApi(Build.VERSION_CODES.O)
     suspend fun selectDateAndLoadSessions(date: LocalDate): List<BookedSession> {
         _selectedDate.value = date
         return loadSessionsForDate(date)
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private suspend fun loadSessionsForDate(date: LocalDate): List<BookedSession> {
         // First try to get from cache
         BookedSessionCache.get(date)?.let {
@@ -121,6 +125,7 @@ class CalendarViewModel(
         return domainSessions
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun getSessionCountForDate(date: LocalDate): Int {
         return _bookedSessions.value.count { session ->
             val sessionDate = LocalDateTime.parse(
@@ -131,6 +136,7 @@ class CalendarViewModel(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun getMaxSessionsInMonth(): Int {
         val currentMonth = _selectedDate.value?.month ?: return 0
         return _bookedSessions.value
