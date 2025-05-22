@@ -48,6 +48,9 @@
         <activity android:name=".views.SimilarTutorsActivity"/>
         <activity android:name=".views.SimilarTutorReviewActivity"/>
         <activity android:name=".views.CalendarActivity"/>
+        <activity
+            android:name=".views.SessionsListActivity"
+            android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

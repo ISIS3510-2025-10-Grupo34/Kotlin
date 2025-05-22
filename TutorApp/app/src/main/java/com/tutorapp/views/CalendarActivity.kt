@@ -1,5 +1,6 @@
 package com.tutorapp.views
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tutorapp.models.BookedSession
+import com.tutorapp.util.Session
 import com.tutorapp.viewModels.CalendarViewModel
 import java.time.LocalDate
 import java.time.YearMonth
@@ -38,7 +40,15 @@ class CalendarActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                CalendarScreen()
+                CalendarScreen(
+                    onDateSelected = { date, sessions ->
+                        val intent = Intent(this, SessionsListActivity::class.java).apply {
+                            putExtra("DATE", date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
+                            putExtra("SESSIONS", ArrayList(sessions))
+                        }
+                        startActivity(intent)
+                    }
+                )
             }
         }
     }
@@ -47,7 +57,10 @@ class CalendarActivity : ComponentActivity() {
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
+fun CalendarScreen(
+    viewModel: CalendarViewModel = viewModel(),
+    onDateSelected: (LocalDate, List<BookedSession>) -> Unit
+) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     val selectedDate by viewModel.selectedDate.collectAsState()
     val bookedSessions by viewModel.bookedSessions.collectAsState()
@@ -55,7 +68,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
     val error by viewModel.error.collectAsState()
 
     LaunchedEffect(Unit) {
-        Session.userid?.let { userId ->
+        Session.userId?.toIntOrNull()?.let { userId ->
             viewModel.loadBookedSessions(userId)
         }
     }
@@ -63,7 +76,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Calendar") },
+                title = { Text("My sessions") },
                 navigationIcon = {
                     IconButton(onClick = { /* TODO: Handle back navigation */ }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -88,7 +101,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
                     Text("<", fontSize = 20.sp)
                 }
                 Text(
-                    text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${currentMonth.year}",
+                    text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)} ${currentMonth.year}",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -133,7 +146,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
                                 val sessionCount = viewModel.getSessionCountForDate(date)
                                 val color = if (sessionCount > 0) {
                                     val intensity = (sessionCount.toFloat() / maxSessions).coerceIn(0f, 1f)
-                                    Color(0xFF4CAF50).copy(alpha = 0.2f + (intensity * 0.8f))
+                                    Color(0xFF2196F3).copy(alpha = 0.2f + (intensity * 0.8f))
                                 } else {
                                     Color.LightGray.copy(alpha = 0.2f)
                                 }
@@ -146,7 +159,8 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
                                         .clip(CircleShape)
                                         .background(color)
                                         .clickable(enabled = sessionCount > 0) {
-                                            viewModel.selectDate(date)
+                                            val sessions = viewModel.getSessionsForDate(date)
+                                            onDateSelected(date, sessions)
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
