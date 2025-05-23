@@ -88,11 +88,7 @@ fun CalendarScreen(
         topBar = {
             TopAppBar(
                 title = { Text("My sessions") },
-                navigationIcon = {
-                    IconButton(onClick = { /* TODO: Handle back navigation */ }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
+
             )
         }
     ) { padding ->

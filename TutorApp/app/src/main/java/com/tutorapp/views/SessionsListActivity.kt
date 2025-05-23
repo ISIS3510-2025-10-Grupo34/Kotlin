@@ -40,11 +40,7 @@ fun SessionsListScreen(date: String, sessions: List<BookedSession>) {
         topBar = {
             TopAppBar(
                 title = { Text("Sessions for $date") },
-                navigationIcon = {
-                    IconButton(onClick = { /* TODO: Handle back navigation */ }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
+
             )
         }
     ) { padding ->

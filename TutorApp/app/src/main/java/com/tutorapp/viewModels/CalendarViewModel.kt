@@ -67,7 +67,7 @@ class CalendarViewModel(
                         _error.value = "Error loading sessions: ${response.code()}"
                     }
                 } else if (!isNetworkAvailable() && cachedSessions.isEmpty()) {
-                    _error.value = "No internet connection and no cached data available"
+                    _error.value = "No internet connection and no cached data available, comeback when you regain connection"
                 }
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
