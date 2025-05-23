@@ -9,10 +9,12 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,13 +27,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tutorapp.models.BookedSession
 import com.tutorapp.viewModels.CalendarViewModel
-import com.tutorapp.viewModels.CalendarViewModelFactory
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.*
-import kotlinx.coroutines.launch
 
 @RequiresApi(Build.VERSION_CODES.O)
 class CalendarActivity : ComponentActivity() {
@@ -39,11 +39,7 @@ class CalendarActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                val viewModel: CalendarViewModel = viewModel(
-                    factory = CalendarViewModelFactory.provideFactory(application)
-                )
                 CalendarScreen(
-                    viewModel = viewModel,
                     onDateSelected = { date, sessions ->
                         val intent = Intent(this, SessionsListActivity::class.java).apply {
                             putExtra("DATE", date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
@@ -61,17 +57,14 @@ class CalendarActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
-    viewModel: CalendarViewModel,
+    viewModel: CalendarViewModel = viewModel(),
     onDateSelected: (LocalDate, List<BookedSession>) -> Unit
 ) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     val selectedDate by viewModel.selectedDate.collectAsState()
     val bookedSessions by viewModel.bookedSessions.collectAsState()
-    val sessionsForSelectedDate by viewModel.sessionsForSelectedDate.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
-    val isOffline by viewModel.isOffline.collectAsState()
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         Session.userid?.let { userId ->
@@ -86,15 +79,6 @@ fun CalendarScreen(
                 navigationIcon = {
                     IconButton(onClick = { /* TODO: Handle back navigation */ }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    if (isOffline) {
-                        Icon(
-                            Icons.Default.CloudOff,
-                            contentDescription = "Offline Mode",
-                            tint = Color.Gray
-                        )
                     }
                 }
             )
@@ -174,10 +158,8 @@ fun CalendarScreen(
                                         .clip(CircleShape)
                                         .background(color)
                                         .clickable(enabled = sessionCount > 0) {
-                                            scope.launch {
-                                                viewModel.selectDateAndLoadSessions(date)
-                                                onDateSelected(date, sessionsForSelectedDate)
-                                            }
+                                            val sessions = viewModel.getSessionsForDate(date)
+                                            onDateSelected(date, sessions)
                                         },
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -190,6 +172,26 @@ fun CalendarScreen(
                             } else {
                                 Box(modifier = Modifier.weight(1f))
                             }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Selected date sessions
+            selectedDate?.let { date ->
+                val sessions = viewModel.getSessionsForDate(date)
+                if (sessions.isNotEmpty()) {
+                    Text(
+                        text = "Sessions for ${date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))}",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn {
+                        items(sessions) { session ->
+                            SessionCard(session = session)
                         }
                     }
                 }
