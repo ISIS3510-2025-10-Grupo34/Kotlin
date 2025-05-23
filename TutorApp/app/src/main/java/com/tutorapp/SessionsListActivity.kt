@@ -45,14 +45,23 @@ class SessionsListActivity : ComponentActivity() {
             val sessions by viewModel.sessionsForSelectedDate.collectAsState()
             val isLoading by viewModel.isLoading.collectAsState()
             val error by viewModel.error.collectAsState()
+            val initialLoadDone by viewModel.initialLoadDone.collectAsState()
             var showDetail by remember { mutableStateOf<BookedSession?>(null) }
 
-            LaunchedEffect(selectedDate) {
-                viewModel.selectDateAndLoadSessions(selectedDate)
+            LaunchedEffect(Unit) {
+                val userId = intent.getIntExtra("userId", -1)
+                if (userId != -1) {
+                    viewModel.loadBookedSessions(userId)
+                }
+            }
+
+            LaunchedEffect(initialLoadDone, selectedDate) {
+                if (initialLoadDone) {
+                    viewModel.selectDateAndLoadSessions(selectedDate)
+                }
             }
 
             if (showDetail != null) {
-                // Aquí podrías mostrar un detalle Compose, pero si quieres seguir usando la Activity clásica:
                 LaunchedEffect(showDetail) {
                     val intent = Intent(context, SessionDetailActivity::class.java).apply {
                         putExtra("session", showDetail)

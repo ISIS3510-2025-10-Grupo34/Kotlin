@@ -43,6 +43,9 @@ class CalendarViewModel(
     private val _sessionsForSelectedDate = MutableStateFlow<List<BookedSession>>(emptyList())
     val sessionsForSelectedDate: StateFlow<List<BookedSession>> = _sessionsForSelectedDate.asStateFlow()
 
+    private val _initialLoadDone = MutableStateFlow(false)
+    val initialLoadDone: StateFlow<Boolean> = _initialLoadDone.asStateFlow()
+
     fun loadBookedSessions(userId: Int) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -95,6 +98,7 @@ class CalendarViewModel(
                 _error.value = "Error: ${e.message}"
             } finally {
                 _isLoading.value = false
+                _initialLoadDone.value = true
             }
         }
     }
