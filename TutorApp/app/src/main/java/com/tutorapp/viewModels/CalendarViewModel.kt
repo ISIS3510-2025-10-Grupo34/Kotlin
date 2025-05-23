@@ -7,8 +7,8 @@ import android.net.NetworkCapabilities
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.tutorapp.data.AppDatabase
-import com.tutorapp.data.BookedSessionDao
-import com.tutorapp.data.BookedSessionEntity
+import com.tutorapp.data.BookedSessionCalendarDao
+import com.tutorapp.data.BookedSessionCalendarEntity
 import com.tutorapp.models.BookedSession
 import com.tutorapp.remote.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +21,7 @@ import java.time.format.DateTimeFormatter
 
 class CalendarViewModel(
     application: Application,
-    private val bookedSessionDao: BookedSessionDao
+    private val bookedSessionCalendarDao: BookedSessionCalendarDao
 ) : AndroidViewModel(application) {
     private val _bookedSessions = MutableStateFlow<List<BookedSession>>(emptyList())
     val bookedSessions: StateFlow<List<BookedSession>> = _bookedSessions.asStateFlow()
@@ -45,7 +45,7 @@ class CalendarViewModel(
 
             try {
                 // First try to load from Room cache
-                val cachedSessions = bookedSessionDao.getAllSessions()
+                val cachedSessions = bookedSessionCalendarDao.getAllSessions()
                 if (cachedSessions.isNotEmpty()) {
                     _bookedSessions.value = cachedSessions.map { it.toDomain() }
                     _isStale.value = true
@@ -58,8 +58,8 @@ class CalendarViewModel(
                         val sessions = response.body()?.booked_sessions ?: emptyList()
                         
                         // Save to Room
-                        bookedSessionDao.clearAll()
-                        bookedSessionDao.insertAll(sessions.map { it.toEntity() })
+                        bookedSessionCalendarDao.clearAll()
+                        bookedSessionCalendarDao.insertAll(sessions.map { it.toEntity() })
                         
                         _bookedSessions.value = sessions
                         _isStale.value = false
@@ -113,7 +113,7 @@ class CalendarViewModel(
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    private fun BookedSessionEntity.toDomain(): BookedSession {
+    private fun BookedSessionCalendarEntity.toDomain(): BookedSession {
         return BookedSession(
             id = id,
             tutorName = tutorName,
@@ -124,8 +124,8 @@ class CalendarViewModel(
         )
     }
 
-    private fun BookedSession.toEntity(): BookedSessionEntity {
-        return BookedSessionEntity(
+    private fun BookedSession.toEntity(): BookedSessionCalendarEntity {
+        return BookedSessionCalendarEntity(
             id = id,
             tutorName = tutorName,
             courseName = courseName,
