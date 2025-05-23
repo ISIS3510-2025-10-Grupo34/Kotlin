@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -344,6 +345,25 @@ fun StudentProfileScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = {
+                        val intent = Intent(context, GamificationActivity::class.java).apply {
+                            putExtra("USER_ID", studentId.toInt())
+                        }
+                        context.startActivity(intent)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                ) {
+                    Text("Ver mi progreso 🎯", color = Color.White)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+
                 Text(
                     text = "Learning Styles",
                     style = MaterialTheme.typography.titleMedium,
@@ -380,7 +400,6 @@ fun StudentProfileScreen(
                     color = Primary,
                     fontWeight = FontWeight.Bold
                 )
-
                 ListOfTutorCardsToReview(Modifier, studentId, tutoringSessionsToReview)
             }
         }
