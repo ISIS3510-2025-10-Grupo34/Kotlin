@@ -46,6 +46,16 @@ class CalendarViewModel(
     private val _initialLoadDone = MutableStateFlow(false)
     val initialLoadDone: StateFlow<Boolean> = _initialLoadDone.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            bookedSessions.collect { sessions ->
+                _selectedDate.value?.let { date ->
+                    loadSessionsForDate(date)
+                }
+            }
+        }
+    }
+
     fun loadBookedSessions(userId: Int) {
         viewModelScope.launch {
             _isLoading.value = true
