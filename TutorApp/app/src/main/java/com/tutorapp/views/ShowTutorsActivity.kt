@@ -276,6 +276,7 @@ fun TutorScreenHeader(modifier: Modifier, token: String) {
 
                     val intent = Intent(context, CalendarActivity::class.java).apply {
                         putExtra("ID", id)
+                        putExtra("FORCE_REFRESH", true)
                     }
                     context.startActivity(intent)
                 },
