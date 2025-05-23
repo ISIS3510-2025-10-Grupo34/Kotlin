@@ -98,4 +98,7 @@ interface ApiService {
 
     @GET("booked-sessions/")
     suspend fun getBookedSessions(@Query("id") userId: Int): Response<BookedSessionsResponse>
+
+    @GET("record-login/")
+    suspend fun recordLogin(@Query("id") userId: Int): Response<ApiResponse>
 }
