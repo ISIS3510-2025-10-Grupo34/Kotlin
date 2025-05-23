@@ -19,9 +19,13 @@ import androidx.room.TypeConverters
         TutoringSessionEntity::class,
         CachedNotificationEntity::class,
         StudentProfileEntity::class,
-        BookedSessionEntity::class
+        BookedSessionEntity::class,
+        BookedSessionCalendarEntity::class
+
+        
     ],
     version = 8
+
 )
 
 abstract class AppDatabase : RoomDatabase() {
@@ -33,7 +37,11 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tutoringSessionDao(): TutoringSessionDao
     abstract fun cachedNotificationDao(): CachedNotificationDao
     abstract fun studentProfileDao(): StudentProfileDao
+
+    abstract fun bookedSessionCalendarDao(): BookedSessionCalendarDao
+
     abstract fun bookedSessionDao(): BookedSessionDao
+
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null

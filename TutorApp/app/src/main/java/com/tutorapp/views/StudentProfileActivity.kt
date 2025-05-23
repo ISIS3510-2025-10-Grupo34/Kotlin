@@ -240,7 +240,9 @@ fun StudentProfileScreen(
                     IconButton(
                         onClick = {
                             val dao = db.sessionDataDao()
+                            val bsdao = db.bookedSessionCalendarDao()
                             coroutineScope.launch { dao.clearData()
+                                bsdao.clearAll()
                             studentProfileDao.clearData()}
                             val intent = Intent(context, WelcomeActivity::class.java)
                             context.startActivity(intent)

@@ -8,7 +8,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit // Import TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "http://192.168.1.7:8000/api/"
+
+    private const val BASE_URL = "http://Tutorapp-env-1.eba-3gbpmybu.us-east-1.elasticbeanstalk.com/api/"
+
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY

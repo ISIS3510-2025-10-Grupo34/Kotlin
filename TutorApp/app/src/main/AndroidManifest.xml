@@ -47,7 +47,14 @@
         <activity android:name=".views.NotificationCenterActivity"/>
         <activity android:name=".views.SimilarTutorsActivity"/>
         <activity android:name=".views.SimilarTutorReviewActivity"/>
+
+        <activity android:name=".views.CalendarActivity"/>
+        <activity
+            android:name=".views.SessionsListActivity"
+            android:exported="false" />
+
         <activity android:name=".views.BookedSessionsActivity"/>
+
 
         <provider
             android:name="androidx.core.content.FileProvider"
