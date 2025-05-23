@@ -359,7 +359,7 @@ fun StudentProfileScreen(
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
                 ) {
-                    Text("Ver mi progreso 🎯", color = Color.White)
+                    Text("View my progress 🎯", color = Color.White)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
