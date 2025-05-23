@@ -1,7 +1,14 @@
 package com.tutorapp.viewModels
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.tutorapp.data.AppDatabase
+import com.tutorapp.data.BookedSessionDao
+import com.tutorapp.data.BookedSessionEntity
 import com.tutorapp.models.BookedSession
 import com.tutorapp.remote.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,7 +19,10 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-class CalendarViewModel : ViewModel() {
+class CalendarViewModel(
+    application: Application,
+    private val bookedSessionDao: BookedSessionDao
+) : AndroidViewModel(application) {
     private val _bookedSessions = MutableStateFlow<List<BookedSession>>(emptyList())
     val bookedSessions: StateFlow<List<BookedSession>> = _bookedSessions.asStateFlow()
 
@@ -25,16 +35,39 @@ class CalendarViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    fun loadBookedSessions(userId: Int) {
+    private val _isStale = MutableStateFlow(false)
+    val isStale: StateFlow<Boolean> = _isStale.asStateFlow()
+
+    fun loadBookedSessions(userId: Int, forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+
             try {
-                val response = RetrofitClient.instance.getBookedSessions(userId)
-                if (response.isSuccessful) {
-                    _bookedSessions.value = response.body()?.booked_sessions ?: emptyList()
-                } else {
-                    _error.value = "Error loading sessions: ${response.code()}"
+                // First try to load from Room cache
+                val cachedSessions = bookedSessionDao.getAllSessions()
+                if (cachedSessions.isNotEmpty()) {
+                    _bookedSessions.value = cachedSessions.map { it.toDomain() }
+                    _isStale.value = true
+                }
+
+                // If we have internet and either force refresh or no cache, fetch from API
+                if (isNetworkAvailable() && (forceRefresh || cachedSessions.isEmpty())) {
+                    val response = RetrofitClient.instance.getBookedSessions(userId)
+                    if (response.isSuccessful) {
+                        val sessions = response.body()?.booked_sessions ?: emptyList()
+                        
+                        // Save to Room
+                        bookedSessionDao.clearAll()
+                        bookedSessionDao.insertAll(sessions.map { it.toEntity() })
+                        
+                        _bookedSessions.value = sessions
+                        _isStale.value = false
+                    } else {
+                        _error.value = "Error loading sessions: ${response.code()}"
+                    }
+                } else if (!isNetworkAvailable() && cachedSessions.isEmpty()) {
+                    _error.value = "No internet connection and no cached data available"
                 }
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
@@ -71,5 +104,34 @@ class CalendarViewModel : ViewModel() {
             .eachCount()
             .values
             .maxOrNull() ?: 0
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        val connectivityManager = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun BookedSessionEntity.toDomain(): BookedSession {
+        return BookedSession(
+            id = id,
+            tutorName = tutorName,
+            courseName = courseName,
+            cost = cost,
+            dateTime = dateTime,
+            student = student
+        )
+    }
+
+    private fun BookedSession.toEntity(): BookedSessionEntity {
+        return BookedSessionEntity(
+            id = id,
+            tutorName = tutorName,
+            courseName = courseName,
+            cost = cost,
+            dateTime = dateTime,
+            student = student
+        )
     }
 } 

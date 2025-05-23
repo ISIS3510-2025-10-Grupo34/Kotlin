@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tutorapp.models.BookedSession
 import com.tutorapp.viewModels.CalendarViewModel
+import com.tutorapp.viewModels.CalendarViewModelFactory
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -35,11 +37,19 @@ import java.util.*
 
 @RequiresApi(Build.VERSION_CODES.O)
 class CalendarActivity : ComponentActivity() {
+    private val calendarViewModel: CalendarViewModel by viewModels { 
+        CalendarViewModelFactory(application) 
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val forceRefresh = intent.getBooleanExtra("FORCE_REFRESH", false)
+        
         setContent {
             MaterialTheme {
                 CalendarScreen(
+                    viewModel = calendarViewModel,
+                    forceRefresh = forceRefresh,
                     onDateSelected = { date, sessions ->
                         val intent = Intent(this, SessionsListActivity::class.java).apply {
                             putExtra("DATE", date.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")))
@@ -57,7 +67,8 @@ class CalendarActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
-    viewModel: CalendarViewModel = viewModel(),
+    viewModel: CalendarViewModel,
+    forceRefresh: Boolean,
     onDateSelected: (LocalDate, List<BookedSession>) -> Unit
 ) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
@@ -65,10 +76,11 @@ fun CalendarScreen(
     val bookedSessions by viewModel.bookedSessions.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val isStale by viewModel.isStale.collectAsState()
 
     LaunchedEffect(Unit) {
         Session.userid?.let { userId ->
-            viewModel.loadBookedSessions(userId)
+            viewModel.loadBookedSessions(userId, forceRefresh)
         }
     }
 
@@ -210,6 +222,14 @@ fun CalendarScreen(
                 Text(
                     text = errorMessage,
                     color = Color.Red,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+
+            if (isStale) {
+                Text(
+                    text = "Showing cached data",
+                    color = Color.Gray,
                     modifier = Modifier.padding(16.dp)
                 )
             }
