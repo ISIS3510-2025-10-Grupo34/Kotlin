@@ -81,7 +81,9 @@ class NotificationCenterViewModel : ViewModel(){
                             message = it.message,
                             place = it.place,
                             date = it.date,
-                            university = universityName
+                            university = universityName,
+                            scheduledTime = null,
+                            deadline = null
                         )
                     }
                     database.cachedNotificationDao().clearForUniversity(universityName)

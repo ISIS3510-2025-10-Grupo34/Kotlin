@@ -42,6 +42,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tutorapp.viewModels.WriteReviewViewModel
 import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 
 
 class WriteReviewActivity : ComponentActivity() {
@@ -94,6 +99,7 @@ fun WriteReviewScreen(
     val connectivityManager = remember {
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     }
+    val maxCommentLength = 40
 
     var rating by remember { mutableStateOf(0) }
     var comment by remember { mutableStateOf(TextFieldValue()) }
@@ -101,11 +107,13 @@ fun WriteReviewScreen(
 
     LaunchedEffect(Unit) {
         viewModel.sentCount.collectLatest { count ->
-            Toast.makeText(
-                context,
-                "All $count pending review(s) have just been sent.",
-                Toast.LENGTH_LONG
-            ).show()
+            if (count > 0) { // Only show toast if there were pending reviews sent
+                Toast.makeText(
+                    context,
+                    "All $count pending review(s) have just been sent.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 
@@ -142,48 +150,70 @@ fun WriteReviewScreen(
         Spacer(Modifier.height(16.dp))
         OutlinedTextField(
             value = comment,
-            onValueChange = {
-                comment = it
-                isError = false
+            onValueChange = { newTextFieldValue ->
+                // Prevent line breaks and limit length
+                val newText = newTextFieldValue.text.replace("\n", "")
+                if (newText.length <= maxCommentLength) {
+                    comment = newTextFieldValue.copy(text = newText)
+                }
+                isError = false // Reset error when comment changes
             },
             label = { Text("Review") },
             isError = isError,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true, // This helps prevent line breaks from keyboard actions
+            keyboardOptions = KeyboardOptions.Default.copy(
+                imeAction = ImeAction.Done, // Or ImeAction.Next if there's another field
+                keyboardType = KeyboardType.Text
+            ),
+            supportingText = { // Display character count here
+                Text(
+                    text = "${comment.text.length}/$maxCommentLength",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End, // Align to the end (right)
+                    color = if (comment.text.length > maxCommentLength) MaterialTheme.colorScheme.error else LocalContentColor.current.copy(alpha = LocalContentColor.current.alpha * 0.6f) // Dimmer or error color
+                )
+            }
         )
 
         Spacer(Modifier.height(24.dp))
         Button(
             onClick = {
-                val nw = connectivityManager.activeNetwork
-                val caps = connectivityManager.getNetworkCapabilities(nw)
-                val isOnline = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-                if (rating == 0 || comment.text.isBlank()) {
-                    isError = true
+                // val nw = connectivityManager.activeNetwork // Not directly used for validation
+                // val caps = connectivityManager.getNetworkCapabilities(nw)
+                // val isOnline = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+
+                // Trim comment before validation to ensure spaces don't count as content
+                val trimmedComment = comment.text.trim()
+
+                if (rating == 0 || trimmedComment.isBlank()) {
+                    isError = true // Set general error flag
                     val msg = when {
-                        rating == 0 && comment.text.isBlank() -> "Please select a rating and write a review"
-                        rating == 0                          -> "Please select a rating"
-                        else                                 -> "Please write a review"
+                        rating == 0 && trimmedComment.isBlank() -> "Please select a rating and write a review."
+                        rating == 0 -> "Please select a rating."
+                        else -> "Please write a review." // This will be shown if comment is blank
                     }
                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 } else {
+                    isError = false // Clear error if validation passes
                     viewModel.postReviewOrSaveDraft(
                         tutoringSessionId,
                         studentId,
                         rating,
-                        comment.text
-                    ) { _, message ->
+                        trimmedComment // Use trimmed comment
+                    ) { success, message -> // Assuming your callback provides a success boolean
                         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                        //if (isOnline) {
-                        //    context.startActivity(
-                        //        Intent(context, StudentProfileActivity::class.java)
-                        //            .putExtra("ID", studentId)
-                        //    )
-                        //}
+                        if (success) {
+                            // Optionally navigate or clear fields
+                            // context.startActivity(Intent(context, StudentProfileActivity::class.java) ...)
+                            // rating = 0
+                            // comment = TextFieldValue("")
+                        }
                     }
                 }
             },
             shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)), // Consider MaterialTheme.colorScheme.primary
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 32.dp)

@@ -58,7 +58,7 @@ class ShowTutorsViewModel(
                 // 👉 Actualiza números faltantes si hay internet
                 if (isNetworkAvailable()) {
                     cachedDomainSessions.forEach { session ->
-                        if (session.tutor_phone_number.isBlank()) {
+                        if (session.tutor_phone.isBlank()) {
                             fetchTutorPhoneNumber(session.tutor_id.toInt(), session.id) { phone ->
                                 // Nada más que hacer, ya se guarda en Room dentro de fetchTutorPhoneNumber
                                 Log.d("ViewModel", "Phone updated for session ${session.id}: $phone")
@@ -140,7 +140,7 @@ class ShowTutorsViewModel(
         return entities.map { entity ->
             TutoringSession(
                 id = entity.id, tutor = entity.tutor, tutor_id = entity.tutor_id,
-                tutor_phone_number = entity.tutor_phone_number, university = entity.university,
+                tutor_phone = entity.tutor_phone, university = entity.university,
                 course = entity.course, cost = entity.cost, date_time = entity.date_time,
                 student = entity.student
             )
@@ -152,7 +152,7 @@ class ShowTutorsViewModel(
         return sessions.map { session ->
             TutoringSessionEntity(
                 id = session.id, tutor = session.tutor, tutor_id = session.tutor_id,
-                tutor_phone_number = defaultPhoneNumber, university = session.university,
+                tutor_phone = defaultPhoneNumber, university = session.university,
                 course = session.course, cost = session.cost, date_time = session.date_time,
                 student = session.student
             )
