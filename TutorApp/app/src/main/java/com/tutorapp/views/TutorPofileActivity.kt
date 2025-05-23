@@ -326,7 +326,7 @@ fun TutorProfileScreen(
     // val coroutineScope = rememberCoroutineScope() // Not used here, can be removed
 
     LaunchedEffect(Unit, avgrating, tutorId, currentUserInfo?.role) {
-        if (currentUserInfo?.role == "tutor" && avgrating < 4.9 && avgrating > 0 && NetworkUtils.isConnected(context)) {
+        if (currentUserInfo?.role == "tutor" && avgrating < 4.0 && avgrating > 0 && NetworkUtils.isConnected(context)) {
             if (NetworkUtils.shouldShowRatingWarning(context, tutorId.toString())) {
                 showDialog = true
                 NetworkUtils.markRatingWarningAsShown(context, tutorId.toString())
