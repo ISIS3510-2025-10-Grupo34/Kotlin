@@ -101,4 +101,16 @@ interface ApiService {
 
     @GET("record-login/")
     suspend fun recordLogin(@Query("id") userId: Int): Response<ApiResponse>
+
+    @POST("update-gamification/")
+    suspend fun updateGamification(@Body request: UpdateGamificationRequest): Response<ApiResponse>
+
+    @GET("leaderboard/")
+    suspend fun getLeaderboard(): Response<List<LeaderboardEntry>>
+
+    @GET("gamification-profile/{userId}/")
+    suspend fun getGamificationProfile(
+        @Path("userId") userId: Int
+    ): Response<GamificationProfileResponse>
+
 }
