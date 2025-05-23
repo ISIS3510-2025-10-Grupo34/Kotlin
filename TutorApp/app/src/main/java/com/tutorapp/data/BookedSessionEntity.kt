@@ -7,8 +7,8 @@ import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 
-@Entity(tableName = "booked_sessions")
-data class BookedSessionEntity(
+@Entity(tableName = "booked_sessions_calendar")
+data class BookedSessionCalendarEntity(
     @PrimaryKey val id: Int,
     val tutorName: String,
     val courseName: String,
@@ -18,13 +18,13 @@ data class BookedSessionEntity(
 )
 
 @Dao
-interface BookedSessionDao {
-    @Query("SELECT * FROM booked_sessions")
-    suspend fun getAllSessions(): List<BookedSessionEntity>
+interface BookedSessionCalendarDao {
+    @Query("SELECT * FROM booked_sessions_calendar")
+    suspend fun getAllSessions(): List<BookedSessionCalendarEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(sessions: List<BookedSessionEntity>)
+    suspend fun insertAll(sessions: List<BookedSessionCalendarEntity>)
 
-    @Query("DELETE FROM booked_sessions")
+    @Query("DELETE FROM booked_sessions_calendar")
     suspend fun clearAll()
 } 

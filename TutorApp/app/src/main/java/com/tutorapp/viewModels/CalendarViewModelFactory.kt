@@ -11,7 +11,7 @@ class CalendarViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CalendarViewModel::class.java)) {
-            val dao = AppDatabase.getDatabase(application).bookedSessionDao()
+            val dao = AppDatabase.getDatabase(application).bookedSessionCalendarDao()
             return CalendarViewModel(application, dao) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
