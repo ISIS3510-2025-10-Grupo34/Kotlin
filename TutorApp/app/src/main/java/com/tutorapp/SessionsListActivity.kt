@@ -1,79 +1,34 @@
 package com.tutorapp
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
-import android.view.View
-import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.tutorapp.adapters.SessionsAdapter
-import com.tutorapp.databinding.ActivitySessionsListBinding
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.tutorapp.models.BookedSession
 import com.tutorapp.viewModels.CalendarViewModel
-import kotlinx.coroutines.launch
+import com.tutorapp.viewModels.CalendarViewModelFactory
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class SessionsListActivity : AppCompatActivity() {
-    private lateinit var binding: ActivitySessionsListBinding
-    private val viewModel: CalendarViewModel by viewModels()
-    private lateinit var sessionsAdapter: SessionsAdapter
-
+class SessionsListActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivitySessionsListBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
-        setupRecyclerView()
-        setupObservers()
-        loadSessions()
-    }
-
-    private fun setupRecyclerView() {
-        sessionsAdapter = SessionsAdapter { session ->
-            navigateToSessionDetail(session)
-        }
-        binding.recyclerViewSessions.apply {
-            layoutManager = LinearLayoutManager(this@SessionsListActivity)
-            adapter = sessionsAdapter
-        }
-    }
-
-    private fun setupObservers() {
-        viewModel.sessionsForSelectedDate.observe(this) { sessions ->
-            updateUI(sessions)
-        }
-
-        viewModel.isLoading.observe(this) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-        }
-
-        viewModel.error.observe(this) { error ->
-            error?.let {
-                Toast.makeText(this, it, Toast.LENGTH_LONG).show()
-            }
-        }
-
-        viewModel.isOffline.observe(this) { isOffline ->
-            if (isOffline) {
-                Toast.makeText(this, "You are offline. Showing cached data.", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    private fun loadSessions() {
-        val userId = intent.getIntExtra("userId", -1)
-        if (userId == -1) {
-            Toast.makeText(this, "Error: User ID not provided", Toast.LENGTH_LONG).show()
-            finish()
-            return
-        }
-
-        viewModel.loadBookedSessions(userId)
-        
-        // Get the selected date from intent or use current date
         val selectedDateStr = intent.getStringExtra("selectedDate")
         val selectedDate = if (selectedDateStr != null) {
             LocalDate.parse(selectedDateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
@@ -81,26 +36,93 @@ class SessionsListActivity : AppCompatActivity() {
             LocalDate.now()
         }
 
-        lifecycleScope.launch {
-            viewModel.selectDateAndLoadSessions(selectedDate)
+        val viewModel: CalendarViewModel by viewModels {
+            CalendarViewModelFactory.provideFactory(application)
+        }
+
+        setContent {
+            val context = LocalContext.current
+            val sessions by viewModel.sessionsForSelectedDate.collectAsState()
+            val isLoading by viewModel.isLoading.collectAsState()
+            val error by viewModel.error.collectAsState()
+            var showDetail by remember { mutableStateOf<BookedSession?>(null) }
+
+            LaunchedEffect(selectedDate) {
+                viewModel.selectDateAndLoadSessions(selectedDate)
+            }
+
+            if (showDetail != null) {
+                // Aquí podrías mostrar un detalle Compose, pero si quieres seguir usando la Activity clásica:
+                LaunchedEffect(showDetail) {
+                    val intent = Intent(context, SessionDetailActivity::class.java).apply {
+                        putExtra("session", showDetail)
+                    }
+                    context.startActivity(intent)
+                    showDetail = null
+                }
+            }
+
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text("Sessions for ${selectedDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))}") },
+                        navigationIcon = {
+                            IconButton(onClick = { finish() }) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            }
+                        }
+                    )
+                }
+            ) { padding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                ) {
+                    when {
+                        isLoading -> {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        }
+                        error != null -> {
+                            Text(
+                                text = error ?: "",
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
+                        sessions.isEmpty() -> {
+                            Text(
+                                text = "No sessions for this day.",
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
+                        else -> {
+                            LazyColumn {
+                                items(sessions) { session ->
+                                    SessionItem(session) { showDetail = it }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
+}
 
-    private fun updateUI(sessions: List<BookedSession>) {
-        if (sessions.isEmpty()) {
-            binding.emptyView.visibility = View.VISIBLE
-            binding.recyclerViewSessions.visibility = View.GONE
-        } else {
-            binding.emptyView.visibility = View.GONE
-            binding.recyclerViewSessions.visibility = View.VISIBLE
-            sessionsAdapter.submitList(sessions)
+@Composable
+fun SessionItem(session: BookedSession, onClick: (BookedSession) -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .clickable { onClick(session) }
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Tutor: ${session.tutorName}")
+            Text("Course: ${session.courseName}")
+            Text("Date & Time: ${session.dateTime}")
+            Text("Cost: $${session.cost}")
         }
-    }
-
-    private fun navigateToSessionDetail(session: BookedSession) {
-        val intent = Intent(this, SessionDetailActivity::class.java).apply {
-            putExtra("session", session)
-        }
-        startActivity(intent)
     }
 } 
