@@ -19,6 +19,9 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 
 class CalendarViewModel(
     application: Application,
@@ -40,11 +43,18 @@ class CalendarViewModel(
     private val _isOffline = MutableStateFlow(false)
     val isOffline: StateFlow<Boolean> = _isOffline.asStateFlow()
 
-    private val _sessionsForSelectedDate = MutableStateFlow<List<BookedSession>>(emptyList())
-    val sessionsForSelectedDate: StateFlow<List<BookedSession>> = _sessionsForSelectedDate.asStateFlow()
-
     private val _initialLoadDone = MutableStateFlow(false)
     val initialLoadDone: StateFlow<Boolean> = _initialLoadDone.asStateFlow()
+
+    val sessionsForSelectedDate: StateFlow<List<BookedSession>> = combine(
+        bookedSessions,
+        selectedDate
+    ) { sessions, date ->
+        if (date == null) emptyList()
+        else sessions.filter {
+            java.time.LocalDateTime.parse(it.dateTime, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")).toLocalDate() == date
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init {
         viewModelScope.launch {
@@ -113,26 +123,8 @@ class CalendarViewModel(
         }
     }
 
-    suspend fun selectDateAndLoadSessions(date: LocalDate): List<BookedSession> {
+    fun selectDate(date: LocalDate) {
         _selectedDate.value = date
-        return loadSessionsForDate(date)
-    }
-
-    private suspend fun loadSessionsForDate(date: LocalDate): List<BookedSession> {
-        // First try to get from cache
-        BookedSessionCache.get(date)?.let {
-            _sessionsForSelectedDate.value = it
-            return it
-        }
-
-        // If not in cache, get from Room database
-        val datePattern = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-        val sessions = withContext(Dispatchers.IO) {
-            bookedSessionDao.getSessionsForDate(datePattern)
-        }
-        val domainSessions = mapEntitiesToDomain(sessions)
-        _sessionsForSelectedDate.value = domainSessions
-        return domainSessions
     }
 
     fun getSessionCountForDate(date: LocalDate): Int {
