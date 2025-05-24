@@ -18,6 +18,8 @@ import com.tutorapp.models.PostTimeToBookRequest
 import com.tutorapp.models.SearchResultFilterResponse
 import com.tutorapp.remote.RetrofitClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -26,8 +28,9 @@ class ShowTutorsViewModel(
     private val tutoringSessionDao: TutoringSessionDao
 ) : AndroidViewModel(application) {
 
-    var sessions by mutableStateOf<List<TutoringSession>>(emptyList())
-        private set
+    private val _sessions = MutableStateFlow<List<TutoringSession>>(emptyList())
+    val sessions: StateFlow<List<TutoringSession>> = _sessions
+
     var emptyFilter by mutableStateOf(false)
         private set
     var isLoading by mutableStateOf(false)
@@ -51,7 +54,7 @@ class ShowTutorsViewModel(
                     tutoringSessionDao.getAvailableSessions()
                 }
                 val cachedDomainSessions = mapEntitiesToDomain(cachedEntities)
-                sessions = cachedDomainSessions
+                _sessions.value = cachedDomainSessions
 
                 Log.i("ViewModel", "Cache Load: Loaded ${cachedDomainSessions.size} sessions from Room. Data is initially STALE.")
 
@@ -78,7 +81,8 @@ class ShowTutorsViewModel(
                                 tutoringSessionDao.insertAll(newEntities)
                             }
 
-                            sessions = networkSessions
+
+                            _sessions.value = networkSessions
                             isStale = false
                             Log.i("ViewModel", "Network Refresh: Success. Loaded ${networkSessions.size}. Data is FRESH.")
                         } else {
@@ -92,7 +96,7 @@ class ShowTutorsViewModel(
                 }
             } catch (e: Exception) {
                 Log.e("ViewModel", "Error during initial load process", e)
-                sessions = emptyList()
+                _sessions.value = emptyList()
                 isStale = true
             } finally {
                 isLoading = false
@@ -112,13 +116,13 @@ class ShowTutorsViewModel(
 
         Log.d("ViewModel", "Applying filter: U='$university', C='$course', P='$professor'")
         isLoading = true
-        val sourceList = sessions
+        val sourceList = sessions.value
         val filteredList = sourceList.filter { session ->
             (university.isEmpty() || session.university.contains(university, ignoreCase = true)) &&
                     (course.isEmpty() || session.course.contains(course, ignoreCase = true)) &&
                     (professor.isEmpty() || session.tutor.contains(professor, ignoreCase = true))
         }
-        sessions = filteredList
+        _sessions.value = filteredList
         emptyFilter = filteredList.isEmpty()
         isLoading = false
         Log.d("ViewModel", "Filter applied. Result count: ${filteredList.size}. EmptyFilter: $emptyFilter.")
