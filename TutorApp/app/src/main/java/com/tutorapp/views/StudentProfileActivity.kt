@@ -4,7 +4,6 @@ package com.tutorapp.views
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
 import androidx.activity.ComponentActivity
@@ -58,9 +57,6 @@ import com.tutorapp.ui.theme.Primary
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
-import java.io.File
-import coil.compose.AsyncImage
-import kotlinx.coroutines.Dispatchers
 
 object ProfileImageCache {
     private val cacheSize = (Runtime.getRuntime().maxMemory() / 1024 / 8).toInt() // Usamos 1/8 de la memoria
@@ -126,9 +122,6 @@ fun StudentProfileScreen(
     // Estado local para cargar perfil offline
     var localProfile by remember { mutableStateOf<StudentProfileEntity?>(null) }
 
-    // Estado para la Uri temporal de la imagen
-    var profileImageUri by remember { mutableStateOf<Uri?>(null) }
-
     // Cargar porcentaje de reseñas
     LaunchedEffect(Unit) {
         if(NetworkUtils.isConnected(context)){
@@ -139,30 +132,34 @@ fun StudentProfileScreen(
     val hasConnection = NetworkUtils.isConnected(context)
     if (hasConnection) {
     LaunchedEffect(studentId) {
+
         viewModel.studentProfile(studentId) {
             isLoading = false
             viewModel.studentProfile?.let { profile ->
                 // Guardar imagen si viene
-                profile.profile_picture?.let { base64Img ->
-                    coroutineScope.launch(Dispatchers.IO) {
-                        val decodedBytes = Base64.decode(base64Img, Base64.DEFAULT)
-                        val tempFile = File.createTempFile("profile_${studentId}", ".jpg", context.cacheDir)
-                        tempFile.writeBytes(decodedBytes)
-                        profileImageUri = Uri.fromFile(tempFile)
-                    }
+                profile.profile_picture?.let {
+                    val decodedBytes = Base64.decode(it, Base64.DEFAULT)
+                    val bitmap = BitmapFactory.decodeStream(ByteArrayInputStream(decodedBytes))
+                    ProfileImageCache.put(studentId, bitmap)
                 }
+
                 val entity = StudentProfileEntity(
                     name = profile.name,
                     university = profile.university,
                     major = profile.major,
                     learningStyles = Converters.fromStringList(profile.learning_styles)
                 )
+
                 coroutineScope.launch {
                     studentProfileDao.saveData(entity)
                 }
             }
         }
+
+        // Guardar en Room si existe perfil
+
     }
+
     }
         else {
             // Cargar de Room si no hay conexión
@@ -268,9 +265,10 @@ fun StudentProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (profileImageUri != null) {
-                        AsyncImage(
-                            model = profileImageUri,
+                    val cachedBitmap = ProfileImageCache.get(studentId)
+                    if (cachedBitmap != null) {
+                        Image(
+                            bitmap = cachedBitmap.asImageBitmap(),
                             contentDescription = "Profile Picture",
                             modifier = Modifier
                                 .size(90.dp)
@@ -279,7 +277,21 @@ fun StudentProfileScreen(
                             contentScale = ContentScale.Crop
                         )
                     } else if (!profileData.profile_picture.isNullOrEmpty()) {
-                        // Mientras se decodifica la imagen, muestra un placeholder
+                        val decodedBytes = Base64.decode(profileData.profile_picture, Base64.DEFAULT)
+                        val bitmap = BitmapFactory.decodeStream(ByteArrayInputStream(decodedBytes))
+                        ProfileImageCache.put(studentId, bitmap)
+
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier
+                                .size(90.dp)
+                                .clip(CircleShape)
+                                .border(2.dp, Color.White, CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        val initial = profileData.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
                         Box(
                             modifier = Modifier
                                 .size(90.dp)
@@ -288,7 +300,7 @@ fun StudentProfileScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = profileData.name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                                text = initial,
                                 color = Color.White,
                                 fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold
