@@ -83,6 +83,7 @@ import android.net.NetworkRequest
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.SnackbarDuration
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.text.style.TextAlign
 import com.tutorapp.data.ShowTutorsViewModelFactory
 
@@ -386,7 +387,8 @@ fun FilterResultsButton(modifier: Modifier, showTutorsViewModel: ShowTutorsViewM
 @Composable
 fun ListOfTutorCards(modifier: Modifier, showTutorsViewModel: ShowTutorsViewModel, token: String, scope: CoroutineScope, snackbarHostState: SnackbarHostState){
     // Usando Column + verticalScroll como en tu versión
-    val sessions = showTutorsViewModel.sessions
+    val sessions by showTutorsViewModel.sessions.collectAsState()
+
     val emptyFilter = showTutorsViewModel.emptyFilter
     val isLoading = showTutorsViewModel.isLoading // Podrías usar isLoading para un indicador
     val scrollState = rememberScrollState()
