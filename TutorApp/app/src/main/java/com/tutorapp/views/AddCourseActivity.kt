@@ -15,14 +15,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +36,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import androidx.compose.runtime.saveable.rememberSaveable
 
 // Observer for network connectivity
 interface ConnectivityObserver {
@@ -58,7 +56,6 @@ class NetworkConnectivityObserver(context: Context) : ConnectivityObserver {
                 trySend(ConnectivityObserver.Status.Unavailable)
             }
         }
-        val request = NetworkCapabilities.TRANSPORT_CELLULAR // placeholder, will register all
         connectivityManager.registerDefaultNetworkCallback(callback)
         // emit initial status
         val current = if (isCurrentlyConnected()) ConnectivityObserver.Status.Available else ConnectivityObserver.Status.Unavailable
@@ -86,7 +83,7 @@ class AddCourseActivity : ComponentActivity() {
         val observer = NetworkConnectivityObserver(applicationContext)
         val connectivityFlow = observer.observe()
 
-        addCourseViewModel.getSearchResults { success, data ->
+        addCourseViewModel.getSearchResults { _, data ->
             val universities = data?.data?.map { (uniName, uni) ->
                 UniversitySimple(name = uniName, id = uni.id)
             } ?: emptyList()
@@ -98,30 +95,24 @@ class AddCourseActivity : ComponentActivity() {
             } ?: emptyMap()
 
             val customColorScheme = lightColorScheme(
-
-                primary = Color(0xFF192650), // Main brand color
-                onPrimary = Color.White, // Text/icon on primary
-                primaryContainer = Color(0xFFE1E5F2), // Lighter shade for container
-                onPrimaryContainer = Color(0xFF192650), // Text/icon on primary container
-
-                secondary= Color(0xFF4A90E2), // Secondary color (less prominent)
-                onSecondary= Color.White, // Text/icon on secondary
-                secondaryContainer= Color(0xFFD1E7FF), // Lighter shade for container
-                onSecondaryContainer = Color(0xFF4A90E2), // Text/icon on secondary container
-
-                tertiary= Color(0xFF51C3B3), // Tertiary contrasting color
-                onTertiary= Color.White, // Text/icon on tertiary
-                tertiaryContainer= Color(0xFFE6F6F4), // Lighter shade for container
-                onTertiaryContainer= Color(0xFF51C3B3), // Text/icon on tertiary container
-
-                background= Color(0xFFF5F5F5), // Background color
-                onBackground= Color.Black, // Text/icon on background
-
-                surface= Color.White, // Surface color for cards, etc.
-                onSurface= Color.Black, // Text/icon on surface
-
-                error= Color.Red, // Error color
-                onError= Color.White, // Text/icon on error
+                primary = PrimaryAppColor,
+                onPrimary = Color.White,
+                primaryContainer = Color(0xFFE1E5F2),
+                onPrimaryContainer = PrimaryAppColor,
+                secondary = Color(0xFF4A90E2),
+                onSecondary = Color.White,
+                secondaryContainer = Color(0xFFD1E7FF),
+                onSecondaryContainer = Color(0xFF4A90E2),
+                tertiary = Color(0xFF51C3B3),
+                onTertiary = Color.White,
+                tertiaryContainer = Color(0xFFE6F6F4),
+                onTertiaryContainer = Color(0xFF51C3B3),
+                background = Color(0xFFF5F5F5),
+                onBackground = Color.Black,
+                surface = Color.White,
+                onSurface = Color.Black,
+                error = Color.Red,
+                onError = Color.White
             )
 
             setContent {
@@ -161,19 +152,21 @@ fun AddCourseScreen(
     val isConnected = connectivityStatus == ConnectivityObserver.Status.Available
 
     // --- Inicializar estados leyendo del cache ---
-    var selectedUniversityName by remember {
+    // Use rememberSaveable for inputs that should survive process death AND configuration changes
+    var selectedUniversityName by rememberSaveable {
         mutableStateOf(viewModel.getCachedInput("universityName") ?: "")
     }
-    var selectedUniversityId by remember {
-        mutableStateOf(viewModel.getCachedInput("universityId")?.toIntOrNull() ?: -1)
+    // Use mutableIntStateOf for primitive Int state
+    var selectedUniversityId by rememberSaveable {
+        mutableIntStateOf(viewModel.getCachedInput("universityId")?.toIntOrNull() ?: -1)
     }
-    var selectedCourseName by remember {
+    var selectedCourseName by rememberSaveable {
         mutableStateOf(viewModel.getCachedInput("courseName") ?: "")
     }
-    var selectedCourseId by remember {
-        mutableStateOf(viewModel.getCachedInput("courseId")?.toIntOrNull() ?: -1)
+    var selectedCourseId by rememberSaveable {
+        mutableIntStateOf(viewModel.getCachedInput("courseId")?.toIntOrNull() ?: -1)
     }
-    var priceState by remember {
+    var priceState by rememberSaveable { // Price is a string due to formatting/input
         mutableStateOf(viewModel.getCachedInput("price") ?: "")
     }
 
@@ -183,6 +176,8 @@ fun AddCourseScreen(
     }
 
     // Store selected date and time as ZonedDateTime to maintain timezone info
+    // This state might not need to be rememberSaveable if it's always reconstructed
+    // from formattedDateTimeForApi or re-picked.
     var selectedZonedDateTime by remember { mutableStateOf<ZonedDateTime?>(null) }
 
     var dateTimeError by remember { mutableStateOf<String?>(null) }
@@ -194,6 +189,7 @@ fun AddCourseScreen(
     // Menús desplegables
     var expandedUniversity by remember { mutableStateOf(false) }
     var expandedCourse by remember { mutableStateOf(false) }
+
 
     // Initialize selectedZonedDateTime from cache if available
     LaunchedEffect(Unit) {
@@ -211,7 +207,7 @@ fun AddCourseScreen(
         }
     }
 
-    Column(modifier = Modifier.padding(16.dp)) {
+    Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
         Text("TutorApp", style = MaterialTheme.typography.headlineLarge)
         Text(
             text = "Create a tutoring session",
@@ -231,14 +227,14 @@ fun AddCourseScreen(
             OutlinedTextField(
                 value = selectedUniversityName,
                 onValueChange = {},
-                label = { Text("University", color = Color(0xFF192650)) },
+                label = { Text("University", color = PrimaryAppColor) },
                 placeholder = { Text("Select university", color = Color.Gray) },
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedUniversity) },
                 modifier = Modifier.menuAnchor().fillMaxWidth(),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedBorderColor = Color(0xFF192650),
-                    unfocusedBorderColor = Color(0xFF192650)
+                    focusedBorderColor = PrimaryAppColor,
+                    unfocusedBorderColor = PrimaryAppColor
                 )
             )
 
@@ -248,7 +244,7 @@ fun AddCourseScreen(
             ) {
                 universities.forEach { uni ->
                     DropdownMenuItem(
-                        text = { Text(uni.name, color= Color(0xFF192650)) },
+                        text = { Text(uni.name, color= PrimaryAppColor) },
                         onClick = {
                             selectedUniversityName= uni.name
                             selectedUniversityId= uni.id
@@ -270,12 +266,13 @@ fun AddCourseScreen(
         // --- Course dropdown ---
         ExposedDropdownMenuBox(
             expanded = expandedCourse,
-            onExpandedChange = { expandedCourse = !expandedCourse }
+            onExpandedChange = { if (selectedUniversityId != -1) expandedCourse = !expandedCourse }
         ) {
             OutlinedTextField(
                 value = selectedCourseName,
                 onValueChange = {},
                 label = { Text("Course") },
+                enabled = selectedUniversityId != -1,
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCourse) },
                 modifier = Modifier
@@ -337,6 +334,10 @@ fun AddCourseScreen(
                         if (ok && est != null) {
                             priceState = est.toString()
                             viewModel.cacheInput("price", priceState)
+                        } else if (ok && est == null) {
+                            Toast.makeText(context, "Estimator couldn't find a price for this selection. Enter your price manually.", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(context, "Failed to get price estimation. Enter your price manually.", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -374,7 +375,7 @@ fun AddCourseScreen(
                 IconButton(onClick = { showDatePicker = true }) {
                     Icon(
                         imageVector = Icons.Default.DateRange,
-                        contentDescription = "Seleccionar fecha y hora"
+                        contentDescription = "Select date and time"
                     )
                 }
             },
@@ -467,22 +468,22 @@ fun AddCourseScreen(
                     state = tp,
                     colors = TimePickerDefaults.colors(
                         // Colores principales para los números grandes
-                        timeSelectorSelectedContainerColor = Color(0xFF192650),
+                        timeSelectorSelectedContainerColor = PrimaryAppColor,
                         timeSelectorUnselectedContainerColor = Color.White,
                         timeSelectorSelectedContentColor = Color.White,
-                        timeSelectorUnselectedContentColor = Color(0xFF192650),
+                        timeSelectorUnselectedContentColor = PrimaryAppColor,
 
                         // Colores para el selector de hora
                         clockDialColor = Color(0xFFE1E5F2),
                         clockDialSelectedContentColor = Color.White,
-                        clockDialUnselectedContentColor = Color(0xFF192650),
-                        selectorColor = Color(0xFF192650),
+                        clockDialUnselectedContentColor = PrimaryAppColor,
+                        selectorColor = PrimaryAppColor,
 
                         // Colores para selector AM/PM (si lo usas)
-                        periodSelectorSelectedContainerColor = Color(0xFF192650),
+                        periodSelectorSelectedContainerColor = PrimaryAppColor,
                         periodSelectorUnselectedContainerColor = Color(0xFFE1E5F2),
                         periodSelectorSelectedContentColor = Color.White,
-                        periodSelectorUnselectedContentColor = Color(0xFF192650),
+                        periodSelectorUnselectedContentColor = PrimaryAppColor,
 
                         // Color del contenedor general
                         containerColor = Color.White
@@ -510,6 +511,14 @@ fun AddCourseScreen(
                         return@Button // <-- Early return, skip postTutoringSession
                     }
                     else -> {
+                        // Validate date/time is not in the past at the moment of saving
+                        val now = ZonedDateTime.now(colombiaZone)
+                        val selectedDateTime = selectedZonedDateTime
+                        if (selectedDateTime == null || selectedDateTime.isBefore(now)) {
+                            dateTimeError = "Cannot select past date/time."
+                            Toast.makeText(context, "Cannot select past date/time.", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
                         currentUserInfo?.let { user ->
                             viewModel.postTutoringSession(
                                 user.id.toString(),
@@ -530,7 +539,7 @@ fun AddCourseScreen(
                     }
                 }
             },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF192650)),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryAppColor),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Save")
@@ -575,40 +584,14 @@ private fun TimePickerTheme(content: @Composable () -> Unit) {
     // usamos un MaterialTheme con colorScheme personalizado
     MaterialTheme(
         colorScheme = MaterialTheme.colorScheme.copy(
-            primary = Color(0xFF192650),
+            primary = PrimaryAppColor,
             onPrimary = Color.White,
             surface = Color.White,
-            onSurface = Color(0xFF192650),
+            onSurface = PrimaryAppColor,
             surfaceVariant = Color(0xFFE1E5F2),
-            onSurfaceVariant = Color(0xFF192650)
+            onSurfaceVariant = PrimaryAppColor
         )
     ) {
         content()
     }
-}
-
-// Añade esta función actualizada donde utilizas el TimePicker
-@Composable
-fun CustomTimePicker(state: TimePickerState) {
-    TimePicker(
-        state = state,
-        colors = TimePickerDefaults.colors(
-            // Estos colores afectan a los dígitos principales en la parte superior
-            clockDialColor = Color(0xFFE1E5F2),
-            clockDialSelectedContentColor = Color.White,
-            clockDialUnselectedContentColor = Color(0xFF192650),
-            selectorColor = Color(0xFF192650),
-            containerColor = Color.White,
-            periodSelectorSelectedContainerColor = Color(0xFF192650),
-            periodSelectorUnselectedContainerColor = Color(0xFFE1E5F2),
-            periodSelectorSelectedContentColor = Color.White,
-            periodSelectorUnselectedContentColor = Color(0xFF192650),
-
-            // Estos afectan directamente a los números grandes en la parte superior
-            timeSelectorSelectedContainerColor = Color(0xFF192650),
-            timeSelectorUnselectedContainerColor = Color.White,
-            timeSelectorSelectedContentColor = Color.White,
-            timeSelectorUnselectedContentColor = Color(0xFF192650)
-        )
-    )
 }

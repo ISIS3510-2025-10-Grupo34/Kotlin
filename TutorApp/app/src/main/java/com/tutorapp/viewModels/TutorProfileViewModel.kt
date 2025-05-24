@@ -96,7 +96,7 @@ class TutorProfileViewModel(
                 return Pair(respP, respI)
             } catch (e: Exception) {
                 currentRetry++
-                Log.e("TutorProfileVM_Retry", "Attempt ${currentRetry} failed for tutorId: $tutorId. Error: ${e.javaClass.simpleName} - ${e.message}")
+                Log.e("TutorProfileVM_Retry", "Attempt $currentRetry failed for tutorId: $tutorId. Error: ${e.javaClass.simpleName} - ${e.message}")
                 if (currentRetry > maxRetries || !isRetryableException(e)) {
                     Log.e("TutorProfileVM_Retry", "Max retries reached or non-retryable exception for tutorId: $tutorId. Rethrowing.")
                     throw e
