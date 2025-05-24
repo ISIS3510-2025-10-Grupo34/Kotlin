@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    id("com.google.gms.google-services")
     alias(libs.plugins.kotlin.android )
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.parcelize)
@@ -82,6 +81,4 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.5.3")
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
-    implementation("com.google.firebase:firebase-analytics")
 }

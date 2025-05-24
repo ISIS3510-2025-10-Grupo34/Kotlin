@@ -24,6 +24,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.os.Build
+import android.os.Environment
 import android.provider.MediaStore
 import android.util.Base64
 import android.widget.Toast
@@ -774,29 +775,38 @@ fun LearningStylesScreen(selectedStyles: List<String>, onContinue: (List<String>
     var learningStyles by rememberSaveable { mutableStateOf(selectedStyles) }
     val styles = listOf("Visual", "Auditory", "Reading", "Kinesthetic")
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(16.dp)
     ) {
-        Text(
-            text = "TutorApp",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black,
-            modifier = Modifier.align(Alignment.Start)
-        )
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+        ) {
+            Text(
+                text = "TutorApp",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+            )
+        }
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+                .align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Select your preferred learning styles (Optional)",
+                style = Typography.bodyLarge,
+                modifier = Modifier.padding(bottom = 16.dp),
+                textAlign = TextAlign.Center
+            )
 
-        Text(
-            text = "Select your preferred learning styles (Optional)",
-            style = Typography.bodyLarge,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             styles.forEach { style ->
                 val isSelected = learningStyles.contains(style)
                 Text(
@@ -815,22 +825,22 @@ fun LearningStylesScreen(selectedStyles: List<String>, onContinue: (List<String>
                         .padding(8.dp)
                 )
             }
-        }
 
-        Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-        Button(
-            onClick = { onContinue(learningStyles) },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)),
-            shape = RoundedCornerShape(50),
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .padding(vertical = 8.dp)
-        ) {
-            Text("Continue", color = Color.White)
+            Button(
+                onClick = { onContinue(learningStyles) },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A2247)),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+            ) {
+                Text("Continue", color = Color.White)
+            }
         }
     }
 }
+
 @Composable
 fun UploadProfileScreen(onImageUploaded: (Uri?) -> Unit) {
     var profilePictureUri by remember { mutableStateOf<Uri?>(null) }
@@ -935,11 +945,20 @@ fun UploadIDScreen(
     }
 
     fun captureImage() {
-        val photoFile = File(context.cacheDir, "photo_${System.currentTimeMillis()}.jpg")
-        cameraImageUri.value = FileProvider.getUriForFile(context, "${context.packageName}.provider", photoFile)
-        cameraImageUri.value?.let { uri ->
-            cameraLauncher.launch(uri)
-        }
+        val photoFile = File(
+            context.getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+            "photo_${System.currentTimeMillis()}.jpg"
+        )
+        photoFile.createNewFile()
+
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.provider",
+            photoFile
+        )
+
+        cameraImageUri.value = uri
+        cameraLauncher.launch(uri)
     }
 
 

@@ -21,22 +21,22 @@ class LoginViewModel : ViewModel() {
                     val token = decodeJwt(response.body()?.data?.token)
                     if (token != null) {
                         val tokenFormatted = Gson().fromJson(token, LoginTokenDecoded::class.java)
+                        // Record the login after successful authentication
+                        try {
+                            RetrofitClient.instance.recordLogin(tokenFormatted.id)
+                            Log.d("LoginViewModel", "Recorded login for user ${tokenFormatted.id}")
+                        } catch (e: Exception) {
+                            Log.e("LoginViewModel", "Failed to record login: ${e.message}")
+                            // Don't fail the login if recording fails
+                        }
                         onResult(true, tokenFormatted)
                     } else {
-
                         onResult(false, null)
                     }
                 } else {
-
                     val jsonString = response.errorBody()?.string()
-
                     val error = JSONObject(jsonString).getString("error")
-
                     val errortoken = LoginTokenDecoded(id=0,email="",role="",3,3, error = error)
-
-
-
-
                     onResult(false, errortoken)
                 }
             } catch (e: Exception) {

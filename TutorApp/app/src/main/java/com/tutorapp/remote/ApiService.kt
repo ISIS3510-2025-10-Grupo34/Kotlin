@@ -90,4 +90,27 @@ interface ApiService {
         @Query("tutorId") tutorId: Int,
     ): Response<GetTimeToBookInsightResponse>
 
+    @GET("similar-tutors-reviews/{tutorId}")
+    suspend fun getSimilarTutorsReviews(@Path("tutorId") tutorId: Int): Response<SimilarTutorsResponse>
+
+    @POST("book-tutoring-session/")
+    suspend fun bookTutoringSession(@Body request: BookTutoringSessionRequest): Response<ApiResponse>
+
+    @GET("booked-sessions/")
+    suspend fun getBookedSessions(@Query("id") userId: Int): Response<BookedSessionsResponse>
+
+    @GET("record-login/")
+    suspend fun recordLogin(@Query("id") userId: Int): Response<ApiResponse>
+
+    @POST("update-gamification/")
+    suspend fun updateGamification(@Body request: UpdateGamificationRequest): Response<ApiResponse>
+
+    @GET("leaderboard/")
+    suspend fun getLeaderboard(): Response<List<LeaderboardEntry>>
+
+    @GET("gamification-profile/{userId}/")
+    suspend fun getGamificationProfile(
+        @Path("userId") userId: Int
+    ): Response<GamificationProfileResponse>
+
 }
