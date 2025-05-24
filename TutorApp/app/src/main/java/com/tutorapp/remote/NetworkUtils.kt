@@ -9,13 +9,14 @@ import java.util.*
 object NetworkUtils {
     fun isConnected(context: Context): Boolean {
         val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                ?: return false // Safe cast and early return
 
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities =
             connectivityManager.getNetworkCapabilities(network) ?: return false
 
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
 
@@ -23,6 +24,8 @@ object NetworkUtils {
         val prefs = context.getSharedPreferences("rating_warnings", Context.MODE_PRIVATE)
         val lastShownKey = "lastShown_$tutorId"
         val lastShown = prefs.getLong(lastShownKey, 0L)
+
+        if (lastShown == 0L) return true
 
         val now = System.currentTimeMillis()
         val calendarNow = Calendar.getInstance().apply { timeInMillis = now }

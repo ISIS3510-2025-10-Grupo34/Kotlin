@@ -12,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,11 +35,7 @@ import com.tutorapp.models.GetTutorProfileResponse
 import com.tutorapp.models.Review
 import com.tutorapp.models.LoginTokenDecoded
 import com.tutorapp.viewModels.TutorProfileViewModel
-
-import android.content.*
 import android.net.*
-import android.os.*
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -50,6 +45,9 @@ import com.tutorapp.data.TutorProfileViewModelFactory
 import com.tutorapp.remote.NetworkUtils
 import com.tutorapp.remote.RetrofitClient
 import kotlinx.coroutines.launch
+import androidx.compose.material3.MaterialTheme
+
+val PrimaryAppColor = Color(0xFF192650)
 
 class TutorProfileActivity : ComponentActivity() {
     private lateinit var connectivityManager: ConnectivityManager
@@ -142,7 +140,7 @@ fun TutorProfileContent(
     // Loading state
     if (uiState.isLoading) { // Show loading only if no profile data yet
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(color = PrimaryAppColor)
         }
         return
     }
@@ -166,7 +164,7 @@ fun TutorProfileContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Stale data message or general error message if profile data exists
-            if (uiState.isStale) {
+            if (uiState.isStale && !uiState.isLoading) {
                 Text(
                     text = if (currentUserInfo?.role == "student") "No internet connection: displayed information may be outdated. Will refresh when reconnected."
                     else "No internet connection: your profile information may be outdated. Will refresh when reconnected.",
@@ -176,7 +174,7 @@ fun TutorProfileContent(
                         .fillMaxWidth()
                         .padding(bottom = 8.dp)
                 )
-            } else if (uiState.error != null && uiState.profile != null) {
+            } else if (uiState.error != null && !uiState.isStale && !uiState.isLoading) {
                 // Show error if data is loaded but an update failed
                 Text(
                     text = uiState.error,
@@ -197,10 +195,10 @@ fun TutorProfileContent(
             )
         }
     } ?: run {
-        // Fallback if profile is null and not loading, and no specific error handled above
-        // This case should ideally be covered by loading or error states.
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Profile data not available.", textAlign = TextAlign.Center)
+        if (!uiState.isLoading && uiState.error == null) { // Fallback if no data, not loading, no error
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Profile data not available.", textAlign = TextAlign.Center)
+            }
         }
     }
 }
@@ -210,6 +208,9 @@ fun TutorProfileContent(
 fun TutorProfileHeader(modifier: Modifier, currentUserInfo: LoginTokenDecoded?) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val iconButtonModifier = remember {
+        Modifier.size(30.dp).clip(CircleShape).background(PrimaryAppColor)
+    }
     Row(
         modifier = modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -222,7 +223,7 @@ fun TutorProfileHeader(modifier: Modifier, currentUserInfo: LoginTokenDecoded?) 
                 .padding(vertical = 15.dp),
             fontSize = 35.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF192650) // Using your primary color
+            color = PrimaryAppColor
         )
         Row(
             horizontalArrangement = Arrangement.spacedBy(24.dp) // Adjusted spacing
@@ -245,10 +246,7 @@ fun TutorProfileHeader(modifier: Modifier, currentUserInfo: LoginTokenDecoded?) 
                         // intent.putExtra("USER_INFO", currentUserInfo) // Pass user info if needed
                         context.startActivity(intent)
                     },
-                    modifier = Modifier
-                        .size(30.dp) // Slightly larger for better tap target
-                        .clip(CircleShape)
-                        .background(Color(0xFF192650))
+                    modifier = iconButtonModifier
                 ) {
                     Icon(
                         imageVector = Icons.Default.Notifications,
@@ -265,10 +263,7 @@ fun TutorProfileHeader(modifier: Modifier, currentUserInfo: LoginTokenDecoded?) 
                             }
                         context.startActivity(intent)
                     },
-                    modifier = Modifier
-                        .size(30.dp) // Slightly larger for better tap target
-                        .clip(CircleShape)
-                        .background(Color(0xFF192650))
+                    modifier = iconButtonModifier
                 ) {
                     Icon(
                         imageVector = Icons.Default.CalendarToday,
@@ -293,10 +288,7 @@ fun TutorProfileHeader(modifier: Modifier, currentUserInfo: LoginTokenDecoded?) 
                     context.startActivity(intent)
                     (context as? ComponentActivity)?.finishAffinity() // Finish all activities in the task
                 },
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF192650))
+                modifier = iconButtonModifier
             ) {
                 Icon(
                     imageVector = Icons.Default.Logout,
@@ -304,7 +296,6 @@ fun TutorProfileHeader(modifier: Modifier, currentUserInfo: LoginTokenDecoded?) 
                     tint = Color.White
                 )
             }
-            // }
         }
     }
 }
@@ -317,16 +308,18 @@ fun TutorProfileScreen(
     timeToBookInsightData: GetTimeToBookInsightResponse?,
     isStale: Boolean // Receive isStale state
 ) {
-    val avgratingog = tutorProfileInfo.data.ratings.toFloat()
-    val avgrating = String.format("%.2f", avgratingog).toFloat()
+    val avgRatingFormatted = remember(tutorProfileInfo.data.ratings) {
+        String.format("%.1f", tutorProfileInfo.data.ratings) // For display
+    }
+    val avgRatingForComparison = remember(tutorProfileInfo.data.ratings) {
+        tutorProfileInfo.data.ratings.toFloat() // For logic
+    }
     val tutorId = currentUserInfo?.id ?: 0 // Prefer currentUserInfo.id
     var showDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    // val snackbarHostState = remember { SnackbarHostState() } // Not used, can be removed if not planned
-    // val coroutineScope = rememberCoroutineScope() // Not used here, can be removed
 
-    LaunchedEffect(Unit, avgrating, tutorId, currentUserInfo?.role) {
-        if (currentUserInfo?.role == "tutor" && avgrating < 4.0 && avgrating > 0 && NetworkUtils.isConnected(context)) {
+    LaunchedEffect(avgRatingForComparison, tutorId, currentUserInfo?.role) {
+        if (currentUserInfo?.role == "tutor" && avgRatingForComparison < 4.0 && avgRatingForComparison > 0 && NetworkUtils.isConnected(context)) {
             if (NetworkUtils.shouldShowRatingWarning(context, tutorId.toString())) {
                 showDialog = true
                 NetworkUtils.markRatingWarningAsShown(context, tutorId.toString())
@@ -340,7 +333,7 @@ fun TutorProfileScreen(
             title = { Text(text = "We can help you improve!") },
             text = {
                 Text(
-                    "Your average review rating is $avgrating, which is a bit low. We've found tutors similar to you. Check out their best reviews to get tips on how you can improve!"
+                    "Your average review rating is $avgRatingFormatted, which is a bit low. We've found tutors similar to you. Check out their best reviews to get tips on how you can improve!"
                 )
             },
             confirmButton = {
@@ -352,7 +345,7 @@ fun TutorProfileScreen(
                         context.startActivity(intent)
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF192650),
+                        containerColor = PrimaryAppColor,
                         contentColor = Color.White
                     )
                 ) {
@@ -361,7 +354,7 @@ fun TutorProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    Text("Dismiss", color = Color(0xFF192650))
+                    Text("Dismiss", color = PrimaryAppColor)
                 }
             }
         )
@@ -375,7 +368,7 @@ fun TutorProfileScreen(
         modifier = Modifier
             .size(100.dp)
             .clip(CircleShape)
-            .background(Color(0xFF192650)), // Your primary color
+            .background(PrimaryAppColor), // Your primary color
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -392,15 +385,17 @@ fun TutorProfileScreen(
 
     // Rating Stars
     Row(verticalAlignment = Alignment.CenterVertically) {
-        val ratingValue = tutorProfileInfo.data.ratings.toInt().coerceIn(0, 5)
+        val ratingValue = remember(tutorProfileInfo.data.ratings) {
+            tutorProfileInfo.data.ratings.toInt().coerceIn(0, 5)
+        }
         repeat(ratingValue) {
-            Icon(Icons.Filled.Favorite, contentDescription = "Filled Star", tint = Color(0xFF192650))
+            Icon(Icons.Filled.Favorite, contentDescription = "Filled Star", tint = PrimaryAppColor)
         }
         repeat(5 - ratingValue) {
-            Icon(Icons.Filled.FavoriteBorder, contentDescription = "Empty Star", tint = Color(0xFF192650))
+            Icon(Icons.Filled.FavoriteBorder, contentDescription = "Empty Star", tint = PrimaryAppColor)
         }
         Spacer(modifier = Modifier.width(4.dp))
-        Text("(${String.format("%.1f", tutorProfileInfo.data.ratings)})", style = MaterialTheme.typography.bodyMedium)
+        Text("($avgRatingFormatted)", style = MaterialTheme.typography.bodyMedium)
     }
     Spacer(modifier = Modifier.height(20.dp)) // Adjusted spacing
 
@@ -418,7 +413,8 @@ fun TutorProfileScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
@@ -456,7 +452,7 @@ fun TutorProfileScreen(
                 context.startActivity(intent)
             },
             shape = RoundedCornerShape(50), // Fully rounded corners
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF192650)),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryAppColor),
             modifier = Modifier.fillMaxWidth(),
             enabled = !isStale
         ) {
@@ -497,7 +493,7 @@ fun TutorProfileScreen(
 @Composable
 fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, isBold: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, contentDescription = null, tint = Color(0xFF192650))
+        Icon(icon, contentDescription = null, tint = PrimaryAppColor)
         Spacer(modifier = Modifier.width(12.dp)) // Increased spacing
         Text(
             text = text,
@@ -515,12 +511,9 @@ fun TutorReviewItem(review: Review) {
             .padding(vertical = 8.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            repeat(review.rating.coerceIn(0,5)) {
-                Icon(Icons.Filled.Favorite, contentDescription = "Filled Star", tint = Color(0xFF192650))
-            }
-            repeat(5 - review.rating.coerceIn(0,5)) {
-                Icon(Icons.Filled.FavoriteBorder, contentDescription = "Empty Star", tint = Color(0xFF192650))
-            }
+            val coercedRating = remember(review.rating) { review.rating.coerceIn(0, 5) }
+            repeat(coercedRating) { Icon(Icons.Filled.Favorite, "Filled Star", tint = PrimaryAppColor) }
+            repeat(5 - coercedRating) { Icon(Icons.Filled.FavoriteBorder, "Empty Star", tint = PrimaryAppColor) }
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(text = review.comment, style = MaterialTheme.typography.bodyMedium)

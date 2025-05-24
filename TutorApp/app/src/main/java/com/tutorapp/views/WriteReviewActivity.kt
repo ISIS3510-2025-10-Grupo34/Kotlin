@@ -1,14 +1,11 @@
 package com.tutorapp.views
 
 import android.content.Context
-import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
-import com.tutorapp.viewModels.LoginViewModel
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,21 +22,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tutorapp.viewModels.WriteReviewViewModel
 import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.foundation.text.KeyboardOptions
@@ -47,7 +37,6 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-
 
 class WriteReviewActivity : ComponentActivity() {
     private val viewModel: WriteReviewViewModel by viewModels()
@@ -96,14 +85,19 @@ fun WriteReviewScreen(
     tutoringSessionId: Int
 ) {
     val context = LocalContext.current
-    val connectivityManager = remember {
-        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    }
     val maxCommentLength = 40
 
-    var rating by remember { mutableStateOf(0) }
+    var rating by remember { mutableIntStateOf(0) }
     var comment by remember { mutableStateOf(TextFieldValue()) }
     var isError by remember { mutableStateOf(false) }
+
+    // Remembered KeyboardOptions
+    val reviewKeyboardOptions = remember {
+        KeyboardOptions.Default.copy(
+            imeAction = ImeAction.Done,
+            keyboardType = KeyboardType.Text
+        )
+    }
 
     LaunchedEffect(Unit) {
         viewModel.sentCount.collectLatest { count ->
@@ -162,10 +156,7 @@ fun WriteReviewScreen(
             isError = isError,
             modifier = Modifier.fillMaxWidth(),
             singleLine = true, // This helps prevent line breaks from keyboard actions
-            keyboardOptions = KeyboardOptions.Default.copy(
-                imeAction = ImeAction.Done, // Or ImeAction.Next if there's another field
-                keyboardType = KeyboardType.Text
-            ),
+            keyboardOptions = reviewKeyboardOptions,
             supportingText = { // Display character count here
                 Text(
                     text = "${comment.text.length}/$maxCommentLength",
@@ -201,14 +192,8 @@ fun WriteReviewScreen(
                         studentId,
                         rating,
                         trimmedComment // Use trimmed comment
-                    ) { success, message -> // Assuming your callback provides a success boolean
+                    ) { _, message -> // Assuming your callback provides a success boolean
                         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                        if (success) {
-                            // Optionally navigate or clear fields
-                            // context.startActivity(Intent(context, StudentProfileActivity::class.java) ...)
-                            // rating = 0
-                            // comment = TextFieldValue("")
-                        }
                     }
                 }
             },
