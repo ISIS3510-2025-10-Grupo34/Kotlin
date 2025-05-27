@@ -113,4 +113,6 @@ interface ApiService {
         @Path("userId") userId: Int
     ): Response<GamificationProfileResponse>
 
+    @GET("top-posting-times/")
+    suspend fun getTopPostingTimes(): Response<List<GetTopPostingTimesResponse>>
 }

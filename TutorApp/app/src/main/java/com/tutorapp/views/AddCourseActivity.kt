@@ -14,10 +14,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -37,6 +41,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 
 // Observer for network connectivity
 interface ConnectivityObserver {
@@ -190,6 +195,11 @@ fun AddCourseScreen(
     var expandedUniversity by remember { mutableStateOf(false) }
     var expandedCourse by remember { mutableStateOf(false) }
 
+    // States for Top Posting Hours Dialog
+    var showTopHoursDialog by remember { mutableStateOf(false) }
+    val topPostingHours by viewModel.topPostingHours.collectAsState()
+    val isLoadingTopHours by viewModel.isLoadingTopHours.collectAsState()
+    val topHoursError by viewModel.topHoursError.collectAsState()
 
     // Initialize selectedZonedDateTime from cache if available
     LaunchedEffect(Unit) {
@@ -381,9 +391,38 @@ fun AddCourseScreen(
             },
             modifier = Modifier.fillMaxWidth()
         )
+
         dateTimeError?.let {
             Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
+
+        // Info Icon for Top Posting Hours
+        IconButton(
+            modifier = Modifier.offset(x = (-10).dp),
+            onClick = {
+                if (isConnected) {
+                    viewModel.fetchTopPostingTimes()
+                    showTopHoursDialog = true
+                } else {
+                    Toast.makeText(context, "Connect to internet to see top posting hours.", Toast.LENGTH_SHORT).show()
+                }
+            },
+            enabled = isConnected // Enable only if connected
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Info,
+                contentDescription = "Show top posting hours",
+                tint = if (isConnected) PrimaryAppColor else Color.Gray
+            )
+        }
+        if (!isConnected) {
+            Text(
+                text = "Connect to the internet to see top posting hours suggestions.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+
 
         // DatePickerDialog
         if (showDatePicker) {
@@ -516,7 +555,6 @@ fun AddCourseScreen(
                         val selectedDateTime = selectedZonedDateTime
                         if (selectedDateTime == null || selectedDateTime.isBefore(now)) {
                             dateTimeError = "Cannot select past date/time."
-                            Toast.makeText(context, "Cannot select past date/time.", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
                         currentUserInfo?.let { user ->
@@ -550,6 +588,18 @@ fun AddCourseScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 4.dp),
                 color = MaterialTheme.colorScheme.error
+            )
+        }
+
+        // --- Top Posting Hours Dialog ---
+        if (showTopHoursDialog) {
+            TopPostingHoursDialog(
+                onDismissRequest = { showTopHoursDialog = false },
+                topHours = topPostingHours,
+                isLoading = isLoadingTopHours,
+                errorMessage = topHoursError,
+                onRetry = { viewModel.fetchTopPostingTimes() },
+                isConnected = isConnected
             )
         }
     }
@@ -594,4 +644,53 @@ private fun TimePickerTheme(content: @Composable () -> Unit) {
     ) {
         content()
     }
+}
+
+@Composable
+fun TopPostingHoursDialog(
+    onDismissRequest: () -> Unit,
+    topHours: List<String>,
+    isLoading: Boolean,
+    errorMessage: String?,
+    onRetry: () -> Unit,
+    isConnected: Boolean
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Top Session Posting Hours") },
+        text = {
+            Column {
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else if (!isConnected && errorMessage == null && topHours.isEmpty()) { // Specifically handle initial offline state
+                    Text("Please connect to the internet to view top posting hours suggestions.")
+                } else if (errorMessage != null) {
+                    Text("Could not load suggestions: $errorMessage", color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = onRetry, enabled = isConnected) {
+                        Text("Retry")
+                    }
+                } else if (topHours.isEmpty()) {
+                    Text("No specific peak hour data currently available. Feel free to post at any time that suits you.")
+                } else {
+                    Text("Consider posting your session during these popular hours in Colombia (Bogota Time - GTM-5) to potentially increase visibility:")
+                    Spacer(Modifier.height(8.dp))
+                    // Using LazyColumn for potentially longer lists, though 5 items is fine in Column too
+                    LazyColumn {
+                        itemsIndexed(topHours) { index, hour ->
+                            Text("${index + 1}. $hour")
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text("Dismiss")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
+    )
 }
