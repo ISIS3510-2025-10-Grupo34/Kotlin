@@ -42,6 +42,9 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import com.tutorapp.models.DemandedSubjectUIInfo // Import the UI model
+import com.tutorapp.ui.theme.TutorAppTheme // Assuming you have a theme
 
 // Observer for network connectivity
 interface ConnectivityObserver {
@@ -201,6 +204,12 @@ fun AddCourseScreen(
     val isLoadingTopHours by viewModel.isLoadingTopHours.collectAsState()
     val topHoursError by viewModel.topHoursError.collectAsState()
 
+    // --- Most Demanded Subject Dialog states ---
+    var showMostDemandedSubjectDialog by remember { mutableStateOf(false) }
+    val mostDemandedSubjectInfo by viewModel.mostDemandedSubjectInfo.collectAsState()
+    val isLoadingMostDemandedSubject by viewModel.isLoadingMostDemandedSubject.collectAsState()
+    val mostDemandedSubjectError by viewModel.mostDemandedSubjectError.collectAsState()
+
     // Initialize selectedZonedDateTime from cache if available
     LaunchedEffect(Unit) {
         if (formattedDateTime.isNotEmpty() && formattedDateTime.contains("-")) {
@@ -273,39 +282,40 @@ fun AddCourseScreen(
         }
 
         Spacer(Modifier.height(16.dp))
-        // --- Course dropdown ---
-        ExposedDropdownMenuBox(
-            expanded = expandedCourse,
-            onExpandedChange = { if (selectedUniversityId != -1) expandedCourse = !expandedCourse }
-        ) {
-            OutlinedTextField(
-                value = selectedCourseName,
-                onValueChange = {},
-                label = { Text("Course") },
-                enabled = selectedUniversityId != -1,
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCourse) },
-                modifier = Modifier
-                    .menuAnchor()      // ← aquí
-                    .fillMaxWidth()
-            )
-            ExposedDropdownMenu(
-                expanded = expandedCourse,
-                onDismissRequest = { expandedCourse = false }
-            ) {
-                coursesByUniversity[selectedUniversityName]?.forEach { crs ->
-                    DropdownMenuItem(
-                        text = { Text(crs.courseName) },
-                        onClick = {
-                            selectedCourseName = crs.courseName
-                            selectedCourseId = crs.id
-                            viewModel.cacheInput("courseName", crs.courseName)
-                            viewModel.cacheInput("courseId", crs.id.toString())
-                            expandedCourse = false
-                        }
+        // --- Course dropdown with Info Icon ---
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.weight(1f)) { // Box to make ExposedDropdownMenuBox take available width
+                ExposedDropdownMenuBox(
+                    expanded = expandedCourse,
+                    onExpandedChange = { if (selectedUniversityId != -1) expandedCourse = !expandedCourse }
+                ) {
+                    OutlinedTextField(
+                        value = selectedCourseName,
+                        onValueChange = {},
+                        label = { Text("Course") },
+                        enabled = selectedUniversityId != -1,
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCourse) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
+                    ExposedDropdownMenu(
+                        expanded = expandedCourse,
+                        onDismissRequest = { expandedCourse = false }
+                    ) {
+                        coursesByUniversity[selectedUniversityName]?.forEach { crs ->
+                            DropdownMenuItem(
+                                text = { Text(crs.courseName) },
+                                onClick = {
+                                    selectedCourseName = crs.courseName
+                                    selectedCourseId = crs.id
+                                    viewModel.cacheInput("courseName", crs.courseName)
+                                    viewModel.cacheInput("courseId", crs.id.toString())
+                                    expandedCourse = false
+                                }
+                            )
+                        }
+                    }
                 }
-
             }
         }
 
@@ -315,6 +325,35 @@ fun AddCourseScreen(
                 text = "A university must be selected first to see the available courses.",
                 style=
                     MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        // Info Icon for Most Demanded Subject
+        IconButton(
+            modifier = Modifier.offset(x = (-10).dp),
+            onClick = {
+                if (isConnected) {
+                    viewModel.fetchMostDemandedSubject()
+                    showMostDemandedSubjectDialog = true
+                } else {
+                    Toast.makeText(context, "Connect to internet to see subject demand.", Toast.LENGTH_SHORT).show()
+                }
+            },
+            enabled = isConnected
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Info, // Or Icons.Filled.School for variety
+                contentDescription = "Show most demanded subject",
+                tint = if (isConnected) PrimaryAppColor else Color.Gray
+            )
+        }
+
+        if (!isConnected) {
+            Text(
+                text = "Connect to the internet to see subject demand suggestions.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp) // Align with dropdown
             )
         }
 
@@ -602,6 +641,18 @@ fun AddCourseScreen(
                 isConnected = isConnected
             )
         }
+
+        // --- Most Demanded Subject Dialog ---
+        if (showMostDemandedSubjectDialog) {
+            MostDemandedSubjectDialog(
+                onDismissRequest = { showMostDemandedSubjectDialog = false },
+                subjectInfo = mostDemandedSubjectInfo,
+                isLoading = isLoadingMostDemandedSubject,
+                errorMessage = mostDemandedSubjectError,
+                onRetry = { viewModel.fetchMostDemandedSubject() },
+                isConnected = isConnected
+            )
+        }
     }
 }
 
@@ -683,6 +734,65 @@ fun TopPostingHoursDialog(
                             Text("${index + 1}. $hour")
                         }
                     }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text("Dismiss")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
+    )
+}
+
+@Composable
+fun MostDemandedSubjectDialog(
+    onDismissRequest: () -> Unit,
+    subjectInfo: DemandedSubjectUIInfo?,
+    isLoading: Boolean,
+    errorMessage: String?,
+    onRetry: () -> Unit,
+    isConnected: Boolean
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Most Demanded Subject Insight") },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+                } else if (!isConnected && errorMessage == null && subjectInfo == null) {
+                    Text("Please connect to the internet to view subject demand insights.")
+                } else if (errorMessage != null) {
+                    Text("Could not load insight: $errorMessage", color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = onRetry, enabled = isConnected) {
+                        Text("Retry")
+                    }
+                } else if (subjectInfo == null) {
+                    Text("No specific data currently available for the most demanded subject.")
+                } else {
+                    Text(
+                        "Currently, the most demanded subject is:",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = subjectInfo.subjectName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryAppColor
+                    )
+                    Text(
+                        text = "at ${subjectInfo.universityName}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "Consider offering sessions for this subject if it aligns with your expertise. This could improve your visibility and potential earnings.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         },
