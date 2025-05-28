@@ -21,11 +21,12 @@ import androidx.room.TypeConverters
         StudentProfileEntity::class,
         BookedSessionEntity::class,
         BookedSessionCalendarEntity::class,
-        GamificationCacheEntity::class
+        GamificationCacheEntity::class,
+        CachedAchievementEntity::class
 
         
     ],
-    version = 9
+    version = 10
 
 )
 
@@ -43,6 +44,7 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun bookedSessionDao(): BookedSessionDao
     abstract fun gamificationCacheDao(): GamificationCacheDao
+
 
 
     companion object {

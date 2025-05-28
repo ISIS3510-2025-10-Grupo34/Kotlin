@@ -27,4 +27,10 @@ interface GamificationCacheDao {
 
     @Delete
     suspend fun delete(entry: GamificationCacheEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAchievement(achievement: CachedAchievementEntity)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM gamification_cache WHERE userId = :userId AND achievement = :achievement)")
+    suspend fun hasAchievement(userId: String, achievement: String): Boolean
 }

@@ -16,6 +16,7 @@ runtimeLivedata = "1.7.8"
 appcompat = "1.6.1"
 ksp = "2.0.0-1.0.22"
 room = "2.6.1"
+coreI18n = "1.0.0"
 
 [libraries]
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
@@ -43,6 +44,7 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 room = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-core-i18n = { group = "androidx.core", name = "core-i18n", version.ref = "coreI18n" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

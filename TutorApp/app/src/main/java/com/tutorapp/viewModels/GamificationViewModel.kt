@@ -2,6 +2,7 @@ package com.tutorapp.viewModels
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -32,6 +33,7 @@ class GamificationViewModel : ViewModel() {
             isLoading = true
             errorMessage = null
             try {
+                Log.d("MyProgressDebug", "userId being sent: $userId")
                 val response = RetrofitClient.instance.getGamificationProfile(userId)
                 if (response.isSuccessful) {
                     profile = response.body()
