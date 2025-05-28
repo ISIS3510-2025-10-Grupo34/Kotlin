@@ -116,6 +116,12 @@ interface ApiService {
     @GET("top-posting-times/")
     suspend fun getTopPostingTimes(): Response<List<GetTopPostingTimesResponse>>
 
+    @GET("booked-sessions-v2/")
+    suspend fun getBookedSessionsV2(
+        @Query("id") studentId: String
+    ): Response<List<BookedSessionResponse>>
+
     @GET("most-demanded-subject/")
     suspend fun getMostDemandedSubject(): Response<GetMostDemandedSubjectResponse>
+
 }

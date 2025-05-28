@@ -4,11 +4,17 @@ import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import java.time.format.DateTimeFormatter
 import androidx.lifecycle.*
+import com.tutorapp.data.AppDatabase
+import com.tutorapp.data.CachedAchievementEntity
+import com.tutorapp.data.GamificationCacheDao
 import com.tutorapp.data.TutoringSessionDao
 import com.tutorapp.data.TutoringSessionEntity
 import com.tutorapp.models.BookTutoringSessionRequest
@@ -16,16 +22,21 @@ import com.tutorapp.models.TutoringSession
 import com.tutorapp.models.PostFilterCounterIncreaseRequest
 import com.tutorapp.models.PostTimeToBookRequest
 import com.tutorapp.models.SearchResultFilterResponse
+import com.tutorapp.models.UpdateGamificationRequest
 import com.tutorapp.remote.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
+
 
 class ShowTutorsViewModel(
     application: Application,
-    private val tutoringSessionDao: TutoringSessionDao
+    private val tutoringSessionDao: TutoringSessionDao,
+    private val gamificationCacheDao: GamificationCacheDao
 ) : AndroidViewModel(application) {
 
     private val _sessions = MutableStateFlow<List<TutoringSession>>(emptyList())
@@ -218,6 +229,7 @@ class ShowTutorsViewModel(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun bookTutoringSession(userId: Int, tutoringSessionId: Int, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -227,6 +239,13 @@ class ShowTutorsViewModel(
                     val message = response.body()?.message ?: "Booking successful"
                     onResult(true, message)
                     Log.i("Booking", message)
+                    checkAndAssignAchievements(userId.toString())
+                    checkCommittedStudentAchievement(userId.toString()) { achievement ->
+                        Log.i("Achievement", "Awarded: $achievement")
+                    }
+                    checkThreeBookingsInAWeekAchievement(userId.toString()){ achievement ->
+                        Log.i("Achievement", "Awarded: $achievement")
+                    }
                 } else {
                     val errorMsg = response.errorBody()?.string() ?: "Unknown error"
                     onResult(false, errorMsg)
@@ -260,6 +279,133 @@ class ShowTutorsViewModel(
             }
         }
     }
+
+    private fun checkAndAssignAchievements(studentId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val previousBookings = tutoringSessionDao.getBookingsByStudent(studentId)
+            if (previousBookings.isEmpty()) {
+                // Award "First Booking" achievement
+                Log.i("Achievement", "Awarding First Booking achievement to $studentId")
+                // Aquí podrías guardar en cache o usar tu DAO para persistir este logro
+                gamificationCacheDao.insertAchievement(
+                    CachedAchievementEntity(
+                        studentId = studentId,
+                        achievementName = "First Booking",
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+                syncAchievementWithBackend(studentId, "First Booking")
+            }
+        }
+    }
+
+
+    fun checkCommittedStudentAchievement(studentId: String, onAchievementUnlocked: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val dao = AppDatabase.getDatabase(getApplication()).tutoringSessionDao()
+                val bookings = dao.getBookingsByStudent(studentId)
+
+                // Map of tutorId to number of bookings
+                val bookingCountByTutor = bookings.groupingBy { it.tutor_id }.eachCount()
+
+                // Find if there's any tutor with 3 or more bookings
+                val qualifiedTutor = bookingCountByTutor.entries.firstOrNull { it.value >= 3 }
+
+                if (qualifiedTutor != null) {
+                    Log.i("Achievement", "Awarding Committed Student achievement to $studentId with tutor ${qualifiedTutor.key}")
+
+                    // Save achievement in Room or trigger logic
+                    val achievement = "Committed Student"
+                    val timestamp = System.currentTimeMillis()
+                    val gamificationCacheDao = AppDatabase.getDatabase(getApplication()).gamificationCacheDao()
+
+                    gamificationCacheDao.insertAchievement(
+                        CachedAchievementEntity(
+                            studentId = studentId,
+                            achievementName = achievement,
+                            timestamp = timestamp
+                        )
+                    )
+
+                    withContext(Dispatchers.Main) {
+                        onAchievementUnlocked(achievement)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("AchievementCheck", "Error checking Committed Student: ${e.message}")
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun checkThreeBookingsInAWeekAchievement(studentId: String, onAchievementUnlocked: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val response = RetrofitClient.instance.getBookedSessionsV2(studentId)
+                if (response.isSuccessful) {
+                    val bookings = response.body() ?: emptyList()
+                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+                    val bookingDates = bookings.mapNotNull {
+                        try {
+                            LocalDate.parse(it.dateTime.substring(0, 10), DateTimeFormatter.ISO_LOCAL_DATE)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }.sorted()
+
+                    // Sliding window to find 3 bookings in a 7-day period
+                    for (i in 0 until bookingDates.size - 2) {
+                        val first = bookingDates[i]
+                        val third = bookingDates[i + 2]
+                        if (ChronoUnit.DAYS.between(first, third) <= 6) {
+                            withContext(Dispatchers.Main) {
+                                onAchievementUnlocked("3 Bookings in a Week")
+                            }
+
+                            // Persist locally (opcional)
+                            gamificationCacheDao.insertAchievement(
+                                CachedAchievementEntity(
+                                    studentId = studentId,
+                                    achievementName = "3 Bookings in a Week",
+                                    timestamp = System.currentTimeMillis()
+                                )
+                            )
+                            break
+                        }
+                    }
+                } else {
+                    Log.e("Achievement", "API error: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("Achievement", "Error checking 3 bookings in a week: ${e.message}")
+            }
+        }
+    }
+
+    private fun syncAchievementWithBackend(studentId: String, achievement: String, points: Int = 50) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val payload = UpdateGamificationRequest(
+                    user_id= studentId.toInt(),
+                    achievement = achievement,
+                    points = points
+                )
+                val response = RetrofitClient.instance.updateGamification(payload)
+                if (response.isSuccessful) {
+                    Log.i("GamificationSync", "Achievement synced: $achievement")
+                } else {
+                    Log.e("GamificationSync", "Failed to sync: ${response.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                Log.e("GamificationSync", "Error syncing achievement: ${e.message}")
+            }
+        }
+    }
+
+
+
+
 
 
 }

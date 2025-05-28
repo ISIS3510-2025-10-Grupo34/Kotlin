@@ -48,6 +48,7 @@ android {
 dependencies {
     implementation(libs.room)
     implementation(libs.room.runtime)
+    implementation(libs.androidx.core.i18n)
     annotationProcessor(libs.room.compiler)
     ksp(libs.room.compiler)
 

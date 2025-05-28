@@ -49,6 +49,11 @@ interface TutoringSessionDao {
     @Query("UPDATE tutoring_sessions SET tutor_phone = :phoneNumber WHERE id = :sessionId")
     suspend fun updateTutorPhoneNumber(sessionId: Int, phoneNumber: String)
 
+
+    @Query("SELECT * FROM tutoring_sessions WHERE student = :studentId")
+    suspend fun getBookingsByStudent(studentId: String): List<TutoringSessionEntity>
+
+
     /**
      * Inserta una lista de sesiones de tutoría en la base de datos.
      * Gracias a OnConflictStrategy.REPLACE, si una sesión con el mismo 'id'

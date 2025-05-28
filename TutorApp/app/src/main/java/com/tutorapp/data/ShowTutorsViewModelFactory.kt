@@ -27,11 +27,12 @@ class ShowTutorsViewModelFactory(
 
             // Si coincide, obtiene la instancia del DAO necesario desde AppDatabase
             val tutoringSessionDao = AppDatabase.getDatabase(application).tutoringSessionDao()
+            val gamificationCacheDao = AppDatabase.getDatabase(application).gamificationCacheDao()
 
             // Crea y devuelve una nueva instancia de ShowTutorsViewModel,
             // pasando las dependencias requeridas (application y el dao)
             @Suppress("UNCHECKED_CAST") // Es seguro aquí porque ya comprobamos la clase
-            return ShowTutorsViewModel(application, tutoringSessionDao) as T
+            return ShowTutorsViewModel(application, tutoringSessionDao, gamificationCacheDao) as T
         }
         // Si se pide crear un ViewModel diferente, lanza una excepción
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
