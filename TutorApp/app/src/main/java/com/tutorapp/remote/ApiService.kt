@@ -121,4 +121,7 @@ interface ApiService {
         @Query("id") studentId: String
     ): Response<List<BookedSessionResponse>>
 
+    @GET("most-demanded-subject/")
+    suspend fun getMostDemandedSubject(): Response<GetMostDemandedSubjectResponse>
+
 }
