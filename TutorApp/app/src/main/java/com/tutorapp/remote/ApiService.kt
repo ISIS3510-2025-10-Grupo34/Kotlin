@@ -115,4 +115,7 @@ interface ApiService {
 
     @GET("top-posting-times/")
     suspend fun getTopPostingTimes(): Response<List<GetTopPostingTimesResponse>>
+
+    @GET("most-demanded-subject/")
+    suspend fun getMostDemandedSubject(): Response<GetMostDemandedSubjectResponse>
 }
